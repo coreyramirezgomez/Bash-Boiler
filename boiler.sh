@@ -21,51 +21,51 @@ generate_template()
 		echo "Missing template name"
 		exit 1
 	fi
-	cat > "$1".sh <<- EOF
-	#!/bin/bash
+	cat > "$1".sh << EOL
+#!/bin/bash
 
-	#### Global Variables ####
-	DEBUG=0
-	#### Functions ####
-	usage()
-	{
-		echo ""
-		echo "	Usage for \$0:"
-		echo "	Optional Flags:"
-		echo "		-h: Display this dialog"
-		echo "		-d: Enable Debugging."
-		echo "	Required Flags:"
-		echo ""
-	}
+#### Global Variables ####
+DEBUG=0
+#### Functions ####
+usage()
+{
+	echo ""
+	echo "	Usage for \$0:"
+	echo "	Optional Flags:"
+	echo "		-h: Display this dialog"
+	echo "		-d: Enable Debugging."
+	echo "	Required Flags:"
+	echo ""
+}
 
-	#### Main Run ####
-	if [ \$# -lt 1 ]; then
-		echo "Missing arguments"
-		usage
-		exit 1
-	else
-		while getopts "hd" opt
-		do
-			case "\$opt" in
-				"h")
-					usage
-					;;
-				"d")
-					DEBUG=1
-					;;
-				"*")
-					echo "Unrecognized Argument: \$opt"
-					usage
-					exit 1
-					;;
-			esac
-		done
-	fi
-	if [ \$DEBUG -eq 1 ]; then
-		echo "DEBUG: \$DEBUG"
-	fi
-	exit 0
-	EOF
+#### Main Run ####
+if [ \$# -lt 1 ]; then
+	echo "Missing arguments"
+	usage
+	exit 1
+else
+	while getopts "hd" opt
+	do
+		case "\$opt" in
+			"h")
+				usage
+				;;
+			"d")
+				DEBUG=1
+				;;
+			"*")
+				echo "Unrecognized Argument: \$opt"
+				usage
+				exit 1
+				;;
+		esac
+	done
+fi
+if [ \$DEBUG -eq 1 ]; then
+	echo "DEBUG: \$DEBUG"
+fi
+exit 0
+EOL
 }
 test_template()
 {

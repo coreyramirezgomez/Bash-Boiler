@@ -26,6 +26,7 @@ generate_template()
 
 #### Global Variables ####
 DEBUG=0
+VERBOSE=""
 #### Functions ####
 usage()
 {
@@ -117,6 +118,14 @@ print()
 	printf -- "\$STRING"
 	[ \$NL -eq 1 ] && printf "\n"
 }
+is_root()
+{
+	if [ "\$(id -u)" -ne "0" ]; then
+		print -R "Must run as root. Exiting."
+		usage
+		exit 1
+	fi
+}
 
 #### Main Run ####
 if [ \$# -lt 1 ]; then
@@ -132,6 +141,7 @@ else
 				;;
 			"d")
 				DEBUG=1
+				VERBOSE="v"
 				;;
 			"*")
 				print -R "Unrecognized Argument: \$opt"

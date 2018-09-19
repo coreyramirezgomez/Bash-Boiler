@@ -29,8 +29,8 @@ generate_template()
 	fi
 	cat > "$1" << EOL
 #!/bin/bash
-trap failure_exit 1
-trap success_exit 0
+START=\$(date +%s)
+trap catch_exit INT EXIT
 if [[ "\$(dirname \$0)"  == "." ]]; then
 	WORK_DIR="\$(pwd)"
 else
@@ -57,12 +57,12 @@ usage()
 }
 getResponse()
 {
-	[ $\# -lt 1 ] && print -R "Incorrect use of getResponse function." && exit 1
+	[ \$# -lt 1 ] && print -R "Incorrect use of getResponse function." && exit 1
 	reply=""
-	[ $\FORCE_FLAG -eq 1 ] && reply="y"
+	[ \$FORCE_FLAG -eq 1 ] && reply="y"
 	while :
 	do
-		case "$\reply" in
+		case "\$reply" in
 			"N" | "n")
 				return 1
 				;;
@@ -70,7 +70,7 @@ getResponse()
 				return 0
 				;;
 			*)
-				print -Y -n "$\1 (Y/N): "
+				print -Y -n "\$1 (Y/N): "
 				read -n 1 reply
 				echo ""
 				;;
@@ -183,12 +183,14 @@ print()
 	local RAINBOW=0
 	local RANDOM_COLOR=0
 	local ERR_OUT=0
-	while getopts "f:b:IcnpFAKRGYBPCWS:vZzE" cprint_opt
+	local STYLED_LOG=""
+	local NOTSTYLED_LOG=""
+	while getopts "f:b:IcnpFAKRGYBPCWS:vZzEL:l:" cprint_opt
 	do
 		case "\$cprint_opt" in
 			"f")					# Set foreground/text color.
 				case "\$OPTARG" in
-					"black") [ \$BOLD -eq 0 ] && FGND="\$Black" || FGDN="\$BBlack" ;;
+					"black") [ \$BOLD -eq 0 ] && FGND="\$Black" || FGND="\$BBlack" ;;
 					"red") [ \$BOLD -eq 0 ] && FGND="\$Red" || FGND="\$BRed" ;;
 					"green") [ \$BOLD -eq 0 ] && FGND="\$Green" || FGND="\$BGreen" ;;
 					"yellow") [ \$BOLD -eq 0 ] && FGND="\$Yellow" || FGND="\$BYellow" ;;
@@ -227,7 +229,7 @@ print()
 			"p") ((PNL++)) ;; 			# Prepend with newline.
 			"F") [ -f "\$FIG" ] && STYLE="\$FIG" ;;
 			"A") [ -f "\$CS" ] && STYLE="\$CS" ;;
-			"K") [ \$BOLD -eq 0 ] && FGND="\$Black" ||  FGDN="\$BBlack" ;;
+			"K") [ \$BOLD -eq 0 ] && FGND="\$Black" ||  FGND="\$BBlack" ;;
 			"R") [ \$BOLD -eq 0 ] && FGND="\$Red" || FGND="\$BRed" ;;
 			"G") [ \$BOLD -eq 0 ] && FGND="\$Green" || FGND="\$BGreen" ;;
 			"Y") [ \$BOLD -eq 0 ] && FGND="\$Yellow" || FGND="\$BYellow" ;;
@@ -240,6 +242,8 @@ print()
 			"Z") RANDOM_COLOR=1 ;;
 			"z") RAINBOW=1 ;;
 			"E") ERR_OUT=1 ;;
+			"L") STYLED_LOG="\$OPTARG" ;;
+			"l") NOTSTYLED_LOG="\$OPTARG" ;;
 			"*") [ \$DEBUG -eq 1 ] && (>&2 echo "Unknown Arguement: \$opt") ;;
 		esac
 	done
@@ -276,10 +280,19 @@ print()
 				echo ""
 			fi
 		fi
+		if [ ! -z \${STYLED_LOG} ];then
+			echo ""  >> "\$STYLED_LOG"
+		fi
+		if [ ! -z \${NOTSTYLED_LOG} ]; then
+			echo ""  >> "\$NOTSTYLED_LOG"
+		fi
 		((PNL--))
 	done
 	#process_string()
 	string_proc="\$STRING"
+	if [ ! -z \${NOTSTYLED_LOG} ]; then
+		echo "\$string_proc"  >> "\$NOTSTYLED_LOG"
+	fi
 	[ \$RAINBOW -eq 1 ] || [ \$RANDOM_COLOR -eq 1 ] && colors=( "\$Red" "\$Green" "\$Gellow" "\$Blue" "\$Purple" "\$Cyan" )
 	if [ \$POS -eq 0 ]; then # non-centered strings
 		[ ! -z \$STYLE ] && string_proc="\$(\$STYLE \$string_proc)" # Apply style
@@ -329,22 +342,30 @@ print()
 			fi
 		fi
 	fi
+	if [ ! -z \${STYLED_LOG} ];then
+		echo -e "\$string_proc"  >> "\$STYLED_LOG"
+	fi
 	#process_nl()
-	if [ \$PRINTF_E -eq 0 ];then
-		if [ \$NL -eq 1 ]; then
-			if [ \$ERR_OUT -eq 1 ]; then
+
+	if [ \$NL -eq 1 ]; then
+		if [ \$ERR_OUT -eq 1 ]; then
+			if [ \$PRINTF_E -eq 0 ]; then
 				(>&2 printf "\n")
 			else
-				printf "\n"
-			fi
-		fi
-	else
-		if [ \$NL -eq 1 ]; then
-			if [ \$ERR_OUT -eq 1 ]; then
 				(>&2 echo "")
+			fi
+		else
+			if [ \$PRINTF_E -eq 0 ];then
+				printf "\n"
 			else
 				echo ""
 			fi
+		fi
+		if [ ! -z \${STYLED_LOG} ];then
+			echo ""  >> "\$STYLED_LOG"
+		fi
+		if [ ! -z \${NOTSTYLED_LOG} ]; then
+			echo ""  >> "\$NOTSTYLED_LOG"
 		fi
 	fi
 }
@@ -356,13 +377,15 @@ is_root()
 		exit 1
 	fi
 }
-failure_exit()
+catch_exit()
 {
-	print -R "Detected fatal issue. Exiting."
-}
-success_exit()
-{
-	print -G "Exiting with no errors."
+	END=\$(date +%s)
+	code=\$?
+	case \$code in
+		0) print -G -S "============== Successful exit: \$0 ran for \$(( \$END - \$START ))s ==============";;
+		1) print -R -S "============== Fatal exit: \$0 ran for \$(( \$END - \$START ))s ==============";;
+		*) print -Y -S "============== Unknown exit (\$code): \$0 ran for \$(( \$END - \$START ))s ==============";;
+	esac
 }
 #### Main Run ####
 if [ \$# -lt 1 ]; then

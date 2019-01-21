@@ -1,6 +1,6 @@
 #!/bin/bash
-trap failure_exit 1
-trap success_exit 0
+trap catch_exit $?
+START=$(date +%s)
 if [[ "$(dirname $0)"  == "." ]]; then
 	WORK_DIR="$(pwd)"
 else
@@ -29,6 +29,7 @@ generate_template()
 	fi
 	cat > "$1" << EOL
 #!/bin/bash
+trap catch_exit \$?
 START=\$(date +%s)
 trap catch_exit INT EXIT
 if [[ "\$(dirname \$0)"  == "." ]]; then
@@ -379,11 +380,12 @@ is_root()
 }
 catch_exit()
 {
-	END=\$(date +%s)
 	code=\$?
+	END=\$(date +%s)
 	case \$code in
 		0) print -G -S "============== Successful exit: \$0 ran for \$(( \$END - \$START ))s ==============";;
 		1) print -R -S "============== Fatal exit: \$0 ran for \$(( \$END - \$START ))s ==============";;
+		130) print -Y -S "============== User initied exit: \$0 ran for \$(( \$END - \$START ))s ==============";;	
 		*) print -Y -S "============== Unknown exit (\$code): \$0 ran for \$(( \$END - \$START ))s ==============";;
 	esac
 }
@@ -433,13 +435,16 @@ test_template()
 	echo "$0: Testing debug flag"
 	bash "$NAME"
 }
-failure_exit()
+catch_exit()
 {
-	echo "$0: Detected fatal issue. Exiting."
-}
-success_exit()
-{
-	echo "$0: Exiting with no errors."
+	code=$?
+	END=$(date +%s)
+	case $code in
+		0) print -G -S "============== Successful exit: $0 ran for $(( $END - $START ))s ==============";;
+		1) print -R -S "============== Fatal exit: $0 ran for $(( $END - $START ))s ==============";;
+		130) print -Y -S "============== User initied exit: $0 ran for $(( $END - $START ))s ==============";;
+		*) print -Y -S "============== Unknown exit ($code): $0 ran for $(( $END - $START ))s ==============";;
+	esac
 }
 #### Main Run ####
 if [ $# -lt 1 ]; then

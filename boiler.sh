@@ -663,6 +663,9 @@ EOL
 		echo "$BLOCK_END" >> "$1"
 		echo "" >> "$1"
 	done
+	cat >> "$1" << EOL
+exit 0
+EOL
 }
 generate_external_functions()
 {
@@ -725,6 +728,73 @@ usage_custom()
 	echo "	-n filename: Filename to generate template at."
 	echo "	-u filename: Filename to update with template."
 }
+update_template()
+{
+	[ $# -lt 1 ] && fail_notice_exit -E -R -S "generate_template: Missing template name." 120
+	current_version="$1"
+	new_version="$1-$BASH_BOILER_VERSION"
+	echo "" >> "$new_version"
+	cat > "$new_version" << EOL
+#!/bin/bash
+EOL
+	for BLOCK_START in "${BLOCK_NAMES[@]}"
+	do
+		local_print -e -B -S "generate_template: Building $BLOCK_START"
+		case "$BLOCK_START" in
+			"Non-Customizable Header")
+				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
+				generate_template_header "$new_version"
+				;;
+			"Customizable Variables" | \
+			"Customizable Functions" | \
+			"Customizable Option Parse" | \
+			"Customizable Main Run"| \
+			"Custom Header" | \
+			"Custom Variables" | \
+			"Custom Functions" | \
+			"Custom Main Run")
+				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
+				START_RECORD=0
+				cat "$current_version" | while read line
+				do
+					case "$line" in
+						"$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG") START_RECORD=1 ;;
+						"$BLOCK_END") [ $START_RECORD -eq 1 ] && break ;;
+						*) [ $START_RECORD -gt 0 ] && echo "$line" >> "$new_version" ;;
+					esac
+				done
+				;;
+			"Non-Customizable External Template Functions")
+				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
+				generate_external_functions "$new_version"
+				;;
+			"Non-Customizable Option Parse")
+				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
+				generate_template_option_parse "$new_version"
+				;;
+			"Non-Customizable Global Variables" | \
+			"Non-Customizable Functions")
+				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
+				START_RECORD=0
+				cat "$0" | while read line
+				do
+					case "$line" in
+						"$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG") START_RECORD=1 ;;
+						"$BLOCK_END") [ $START_RECORD -eq 1 ] && break ;;
+						*) [ $START_RECORD -gt 0 ] && echo "$line" >> "$new_version" ;;
+					esac
+				done
+				;;
+		esac
+		local_print -e -B -S "generate_template: Finished $BLOCK_START"
+		echo "$BLOCK_END" >> "$new_version"
+		echo "" >> "$new_version"
+	done
+	cat >> "$new_version" << EOL
+exit 0
+EOL
+	mv -f"$VERBOSE" -- "$new_version" "$current_version"
+}
 #### ####
 
 #### Customizable Option Parse ####
@@ -785,7 +855,7 @@ fi
 if [ $GENERATE -eq 1 ];then
 	generate_template "$NAME"
 elif [ $UPDATE -eq 1 ];then
-	local_print -e -B -S "$0: Not implemented."
+	update_template "$NAME"
 fi
 if [ -f "$NAME" ];then
 	beautysh --files "$NAME"

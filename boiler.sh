@@ -33,7 +33,7 @@ OPTIONS_CUSTOM=""
 #### ####
 
 #### Custom Variables ####
-BASH_BOILER_VERSION="2.0"
+BASH_BOILER_VERSION="2.1"
 BINARIES_REQUIRED=( 'beautysh' )
 BLOCK_FLAG="####"
 BLOCK_END="$BLOCK_FLAG $BLOCK_FLAG"

@@ -12,7 +12,6 @@ DEBUG=0
 FORCE_FLAG=0
 LOGGING=0
 OPTIONS_TEMPLATE="cdfhlp"
-PRETTY_PRINT=1
 QUIET=""
 START_TIME=$(date +%s)
 START_DATE="$(date +%m-%d-%y_%H:%M:%S)"
@@ -296,7 +295,7 @@ init_external_project()
 local_print()
 {
 	if [ $LOGGING -eq 1 ] && [ $DEBUG -eq 1 ];then
-		print -l "$LOG_FILE" "$@"
+		print -e -l "$LOG_FILE" "$@"
 		return 0
 	fi
 	if [ $LOGGING -eq 1 ] && [ $DEBUG -eq 0 ];then
@@ -327,10 +326,8 @@ usage()
 {
 	DEBUG_TMP=$DEBUG
 	LOGGING_TMP=$LOGGING
-	PRETTY_PRINT_TMP=$PRETTY_PRINT
 	DEBUG=1
 	LOGGING=0
-	PRETTY_PRINT=1
 	echo ""
 	echo "Usage for $0:"
 	echo ""
@@ -347,14 +344,10 @@ usage()
 	echo -n "	-l: Toggle logging to $LOG_FILE. Default: "
 	[ $LOGGING_TMP -eq 0 ] && local_print -R "$(var_state $LOGGING_TMP)"
 	[ $LOGGING_TMP -eq 1 ] && local_print -G "$(var_state $LOGGING_TMP)"
-	echo -n "	-p: Toggle pretty print output (colors). Default: "
-	[ $PRETTY_PRINT_TMP -eq 0 ] && local_print -R "$(var_state $PRETTY_PRINT_TMP)"
-	[ $PRETTY_PRINT_TMP -eq 1 ] && local_print -G "$(var_state $PRETTY_PRINT_TMP)"
 	usage_custom
 	echo ""
 	DEBUG=$DEBUG_TMP
 	LOGGING=$LOGGING_TMP
-	PRETTY_PRINT=$PRETTY_PRINT_TMP
 	exit 0
 }
 #### ####
@@ -601,7 +594,6 @@ debug_state()
 	local_print -e -B -S "debug_state: DEBUG: $(var_state $DEBUG)"
 	local_print -e -B -S "debug_state: VERBOSE: $VERBOSE"
 	local_print -e -B -S "debug_state: QUIET: $QUIET"
-	local_print -e -B -S "debug_state: PRETTY_PRINT: $PRETTY_PRINT"
 	local_print -e -B -S "debug_state: START_DATE: $START_DATE"
 	local_print -e -B -S "debug_state: START_TIME: $START_TIME"
 	local_print -e -B -S "debug_state: LOG_FILE: $LOG_FILE"
@@ -715,7 +707,6 @@ else
 			"f") FORCE_FLAG=\$(var_toggle \$FORCE_FLAG) ;;
 			"h") usage ;;
 			"l") LOGGING=\$(var_toggle \$LOGGING) ;;
-			"p") PRETTY_PRINT=\$(var_toggle \$PRETTY_PRINT) ;;
 			"n") GENERATE=1 && NAME="\$OPTARG" ;;
 			"u") UPDATE=1 && NAME="\$OPTARG" ;;
 		esac
@@ -812,7 +803,6 @@ else
 			"f") FORCE_FLAG=$(var_toggle $FORCE_FLAG) ;;
 			"h") usage ;;
 			"l") LOGGING=$(var_toggle $LOGGING) ;;
-			"p") PRETTY_PRINT=$(var_toggle $PRETTY_PRINT) ;;
 			"n") GENERATE=1 && NAME="$OPTARG" ;;
 			"u") UPDATE=1 && NAME="$OPTARG" ;;
 		esac

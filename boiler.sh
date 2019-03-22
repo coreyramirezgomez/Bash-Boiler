@@ -11,29 +11,24 @@ CLEANUP_FLAG=0
 DEBUG=0
 FORCE_FLAG=0
 LOGGING=0
-OPTIONS_TEMPLATE="cdfhlp"
 QUIET=""
 START_TIME=$(date +%s)
 START_DATE="$(date +%m-%d-%y_%H:%M:%S)"
 VERBOSE=""
-if [[ "$(dirname $0)"  == "." ]]; then
-	WORK_DIR="$(pwd)"
-else
-	WORK_DIR="$(dirname $0)"
-fi
+WORK_DIR="$(pwd)"
+LOG_FILE="$WORK_DIR/""$(basename $0).log"
 #### ####
 
 #### Customizable Variables ####
 BINARIES_OPTIONAL=()
 BINARIES_REQUIRED=()
 CLEANUP_TARGETS=()
-LOG_FILE="$WORK_DIR/""$(basename $0).log"
-OPTIONS_CUSTOM=""
 #### ####
 
 #### Custom Variables ####
-BASH_BOILER_VERSION="2.1"
-BINARIES_REQUIRED=( 'beautysh' )
+ACTION=""
+BASH_BOILER_VERSION="2.2"
+BINARIES_REQUIRED=( 'beautysh' ) # Duplicated on purpose, to keep BINARIES_REQUIRED clean for generation.
 BLOCK_FLAG="####"
 BLOCK_END="$BLOCK_FLAG $BLOCK_FLAG"
 BLOCK_NAMES=(
@@ -46,26 +41,21 @@ BLOCK_NAMES=(
 	"Non-Customizable External Template Functions"
 	"Customizable Functions"
 	"Custom Functions"
-	"Customizable Option Parse"
-	"Customizable Main Run"
-	"Custom Main Run"
-)
-EXTERNAL_PROJECT_REPOS=(
-	"https://github.com/coreyramirezgomez/cprint.git"
+	"Customizable Script Entry"
 )
 EXTERNAL_PROJECT_DESTINATION=(
 	"$WORK_DIR/cprint"
 )
-EXTERNAL_PROJECT_INIT_OPTIONS=(
-	"bash cprint -E cprint.tmp"
-)
 EXTERNAL_PROJECT_FILE_TO_IMPORT=(
 	"$WORK_DIR/cprint/cprint.tmp"
 )
-GENERATE=0
+EXTERNAL_PROJECT_INIT_OPTIONS=(
+	"bash cprint -E cprint.tmp"
+)
+EXTERNAL_PROJECT_REPOS=(
+	"https://github.com/coreyramirezgomez/cprint.git"
+)
 NAME=""
-OPTIONS_CUSTOM="n:u:"
-UPDATE=0
 #### ####
 
 #### Non-Customizable Functions ####
@@ -134,10 +124,12 @@ catch_exit()
 		*) local_print -e -Y -S "Unknown exit: $code" ;;
 	esac
 	catch_exit_custom "$?"
-	for t in "${CLEANUP_TARGETS[@]}"
-	do
-		cleanup "$t"
-	done
+	if [ $CLEANUP_FLAG -eq 1 ]; then
+		for t in "${CLEANUP_TARGETS[@]}"
+		do
+			cleanup "$t"
+		done
+	fi
 }
 check_binaries()
 {
@@ -180,6 +172,22 @@ cleanup()
 	done
 	return $return_code
 }
+debug_state()
+{
+	local_print -e -B -S "debug_state: Current Template Variable State: "
+	local_print -e -B -S "debug_state: WORK_DIR: $WORK_DIR"
+	local_print -e -B -S "debug_state: FORCE_FLAG: $(var_state $FORCE_FLAG)"
+	local_print -e -B -S "debug_state: DEBUG: $(var_state $DEBUG)"
+	local_print -e -B -S "debug_state: VERBOSE: $VERBOSE"
+	local_print -e -B -S "debug_state: QUIET: $QUIET"
+	local_print -e -B -S "debug_state: START_DATE: $START_DATE"
+	local_print -e -B -S "debug_state: START_TIME: $START_TIME"
+	local_print -e -B -S "debug_state: LOG_FILE: $LOG_FILE"
+	local_print -e -B -S "debug_state: LOGGING: $(var_state $LOGGING)"
+	local_print -e -B -S "debug_state: BINARIES_REQUIRED: ${BINARIES_REQUIRED[*]}"
+	local_print -e -B -S "debug_state: BINARIES_OPTIONAL: ${BINARIES_OPTIONAL[*]}"
+	debug_state_custom
+}
 fail_notice_exit()
 {
 	if [ $# -eq 0 ]; then
@@ -196,7 +204,9 @@ fail_notice_exit()
 		desc="$1"
 		error_code="$2"
 	fi
+	[ $DEBUG -ne 1 ] && DEBUG_DISABLED=$DEBUG && DEBUG=$(var_toggle $DEBUG)
 	local_print -e -R -S "Failure: $desc"
+	[ ! -z ${DEBUG_DISABLED} ] && DEBUG=$(var_toggle $DEBUG)
 	exit $error_code
 }
 get_external_project()
@@ -307,6 +317,81 @@ local_print()
 		return 0
 	fi
 }
+main()
+{
+	[ $DEBUG -eq 1 ] && VERBOSE="v"
+	[ $DEBUG -eq 0 ] && QUIET="q"
+	if [ $LOGGING -eq 1 ] && [ ! -f "$LOG_FILE" ]; then
+		touch "$LOG_FILE"
+		local_print -e -B -S "Created Log File: $LOG_FILE @ $START_DATE" -l "$LOG_FILE"
+	fi
+	debug_state
+	check_binaries "${BINARIES_REQUIRED[@]}"
+	return_code=$?
+	[ $return_code -ne 0 ] && fail_notice_exit "$0: Missing $return_code required binaries." 101
+	check_binaries "${BINARIES_OPTIONAL[@]}"
+	return_code=$?
+	[ $return_code -ne 0 ] && local_print -e -B -Y "$0: Missing $return_code optional binaries."
+	main_custom
+}
+parse_args()
+{
+	EXTRA_ARGS=()
+	while [ ${#} -gt 0 ]; do
+		case "${1}" in
+			"--help" | "-h") usage ;;
+			"--debug") DEBUG=$(var_toggle $DEBUG) ;;
+			"--force" | "-f") FORCE_FLAG=$(var_toggle $FORCE_FLAG) ;;
+			"--cleanup") CLEANUP_FLAG=$(var_toggle $CLEANUP_FLAG) ;;
+			"--logging"| "-l") LOGGING=$(var_toggle $LOGGING) ;;
+			"--logfile")
+				[ -d "$2" ] && fail_notice_exit "Invalid logfile, it is a directory: $2"
+				LOG_FILE="$2"
+				shift
+				;;
+			"--work_dir")
+				[ ! -d "$2" ] && fail_notice_exit "Invalid directory: $2"
+				WORK_DIR="$2"
+				shift
+				;;
+			*)
+				local_print -B "Extra Arg Received, saving for parse_args_custom: $1"
+				EXTRA_ARGS=( "${EXTRA_ARGS[@]}" "$1" )
+				;;
+		esac
+		shift 1
+	done
+	parse_args_custom "${EXTRA_ARGS[@]}"
+}
+usage()
+{
+	DEBUG_TMP=$DEBUG
+	LOGGING_TMP=$LOGGING
+	DEBUG=1
+	LOGGING=0
+	echo ""
+	echo "Usage for $0:"
+	echo ""
+	echo -n "	--cleanup: Toggle cleanup flag. Removes all files/directory variables in CLEANUP_TARGETS array. Default: "
+	[ $CLEANUP_FLAG -eq 0 ] && local_print -R "$(var_state $CLEANUP_FLAG)"
+	[ $CLEANUP_FLAG -eq 1 ] && local_print -G "$(var_state $CLEANUP_FLAG)"
+	echo -n "	--debug: Toggle Debugging. Default: "
+	[ $DEBUG_TMP -eq 0 ] && local_print -R "$(var_state $DEBUG_TMP)"
+	[ $DEBUG_TMP -eq 1 ] && local_print -G "$(var_state $DEBUG_TMP)"
+	echo -n "	--force: Answer 'yes'/'y' to all questions. (aka force) Default: "
+	[ $FORCE_FLAG -eq 0 ] && local_print -R "$(var_state $FORCE_FLAG)"
+	[ $FORCE_FLAG -eq 1 ] && local_print -G "$(var_state $FORCE_FLAG)"
+	echo "	[--help|-h]: Display this dialog"
+	echo -n "	[--logging|-l]: Toggle logging. Default: "
+	[ $LOGGING_TMP -eq 0 ] && local_print -R "$(var_state $LOGGING_TMP)"
+	[ $LOGGING_TMP -eq 1 ] && local_print -G "$(var_state $LOGGING_TMP)"
+	echo "	--logfile filename: Specifiy the logfile output. Default: $LOG_FILE"
+	usage_custom
+	echo ""
+	DEBUG=$DEBUG_TMP
+	LOGGING=$LOGGING_TMP
+	exit 0
+}
 var_state()
 {
 	case $1 in
@@ -321,34 +406,6 @@ var_toggle()
 		[0-1]) echo $(( (($1 + 1 )) % 2 ));;
 		*) fail_notice_exit "var_toggle: Can't toggle: $1" 120
 	esac
-}
-usage()
-{
-	DEBUG_TMP=$DEBUG
-	LOGGING_TMP=$LOGGING
-	DEBUG=1
-	LOGGING=0
-	echo ""
-	echo "Usage for $0:"
-	echo ""
-	echo -n "	-c: Toggle cleanup flag. Removes all files/directory variables in CLEANUP_TARGETS array. Default: "
-	[ $CLEANUP_FLAG -eq 0 ] && local_print -R "$(var_state $CLEANUP_FLAG)"
-	[ $CLEANUP_FLAG -eq 1 ] && local_print -G "$(var_state $CLEANUP_FLAG)"
-	echo -n "	-d: Toggle Debugging. Default: "
-	[ $DEBUG_TMP -eq 0 ] && local_print -R "$(var_state $DEBUG_TMP)"
-	[ $DEBUG_TMP -eq 1 ] && local_print -G "$(var_state $DEBUG_TMP)"
-	echo -n "	-f: Answer 'yes'/'y' to all questions. (aka force) Default: "
-	[ $FORCE_FLAG -eq 0 ] && local_print -R "$(var_state $FORCE_FLAG)"
-	[ $FORCE_FLAG -eq 1 ] && local_print -G "$(var_state $FORCE_FLAG)"
-	echo "	-h: Display this dialog"
-	echo -n "	-l: Toggle logging to $LOG_FILE. Default: "
-	[ $LOGGING_TMP -eq 0 ] && local_print -R "$(var_state $LOGGING_TMP)"
-	[ $LOGGING_TMP -eq 1 ] && local_print -G "$(var_state $LOGGING_TMP)"
-	usage_custom
-	echo ""
-	DEBUG=$DEBUG_TMP
-	LOGGING=$LOGGING_TMP
-	exit 0
 }
 #### ####
 
@@ -584,22 +641,26 @@ print()
 #### Customizable Functions ####
 catch_exit_custom()
 {
-	local_print -e -B -S "catch_exit_custom: called with args $*"
+	local_print -e -B -S "catch_exit_custom: Started catch_exit_custom function with args:  $*"
 }
-debug_state()
+debug_state_custom()
 {
-	local_print -e -B -S "debug_state: Current Variable State: "
-	local_print -e -B -S "debug_state: WORK_DIR: $WORK_DIR"
-	local_print -e -B -S "debug_state: FORCE_FLAG: $(var_state $FORCE_FLAG)"
-	local_print -e -B -S "debug_state: DEBUG: $(var_state $DEBUG)"
-	local_print -e -B -S "debug_state: VERBOSE: $VERBOSE"
-	local_print -e -B -S "debug_state: QUIET: $QUIET"
-	local_print -e -B -S "debug_state: START_DATE: $START_DATE"
-	local_print -e -B -S "debug_state: START_TIME: $START_TIME"
-	local_print -e -B -S "debug_state: LOG_FILE: $LOG_FILE"
-	local_print -e -B -S "debug_state: LOGGING: $(var_state $LOGGING)"
-	local_print -e -B -S "debug_state: BINARIES_REQUIRED: ${BINARIES_REQUIRED[*]}"
-	local_print -e -B -S "debug_state: BINARIES_OPTIONAL: ${BINARIES_OPTIONAL[*]}"
+	local_print -e -B -S "debug_state_custom: Started debug_state_custom function."
+	local_print -e -B -S "debug_state_custom: Current Custom Variable State: "
+}
+main_custom()
+{
+	local_print -e -B -S "main_custom: Started main_custom function with args:  $*"
+}
+parse_args_custom()
+{
+	local_print -e -B -S "parse_args_custom: Started parse_args_custom function with args:  $*"
+	while [ ${#} -gt 0 ]; do
+		case "${1}" in
+			*) fail_notice_exit "Unknown argument: $1" 1 ;;
+		esac
+		shift 1
+	done
 }
 usage_custom()
 {
@@ -608,6 +669,25 @@ usage_custom()
 #### ####
 
 #### Custom Functions ####
+catch_exit_custom() # Duplicated on purpose, to keep catch_exit_custom clean for generation.
+{
+		local_print -e -B -S "catch_exit_custom: Started catch_exit_custom function with args:  $*"
+}
+debug_state_custom() # Duplicated on purpose, to keep debug_state_custom clean for generation.
+{
+	local_print -e -B -S "debug_state_custom: Started debug_state_custom function."
+	local_print -e -B -S "debug_state_custom: Current Custom Variable State: "
+	local_print -e -B -S "debug_state: ACTION: $ACTION"
+	local_print -e -B -S "debug_state: BASH_BOILER_VERSION: $BASH_BOILER_VERSION"
+	local_print -e -B -S "debug_state: BLOCK_FLAG: $BLOCK_FLAG"
+	local_print -e -B -S "debug_state: BLOCK_END: $BLOCK_END"
+	local_print -e -B -S "debug_state: BLOCK_NAMES: ${BLOCK_NAMES[*]}"
+	local_print -e -B -S "debug_state: EXTERNAL_PROJECT_DESTINATION: ${EXTERNAL_PROJECT_DESTINATION[*]}"
+	local_print -e -B -S "debug_state: EXTERNAL_PROJECT_FILE_TO_IMPORT: ${EXTERNAL_PROJECT_FILE_TO_IMPORT[*]}"
+	local_print -e -B -S "debug_state: EXTERNAL_PROJECT_INIT_OPTIONS: ${EXTERNAL_PROJECT_INIT_OPTIONS[*]}"
+	local_print -e -B -S "debug_state: EXTERNAL_PROJECT_REPOS: ${EXTERNAL_PROJECT_REPOS[*]}"
+	local_print -e -B -S "debug_state: NAME: $NAME"
+}
 generate_template()
 {
 	[ $# -lt 1 ] && fail_notice_exit -E -R -S "generate_template: Missing template name." 120
@@ -714,10 +794,66 @@ else
 fi
 EOL
 }
-usage_custom()
+parse_args_custom() # Duplicated on purpose, to keep parse_args_custom clean for generation.
 {
-	echo "	-n filename: Filename to generate template at."
-	echo "	-u filename: Filename to update with template."
+	local_print -e -B -S "parse_args_custom: Started parse_args_custom function with args:  $*."
+	while [ ${#} -gt 0 ]; do
+		case "${1}" in
+			"--generate" | "-g")
+				[[ "$ACTION" != "" ]] && fail_notice_exit "Another action is already defined. Only use one action at a time: --generate or --update." 1
+				ACTION="GENERATE"
+				;;
+			"--update" | "-u")
+				[[ "$ACTION" != "" ]] && fail_notice_exit "Another action is already defined. Only use one action at a time: --generate or --update." 1
+				ACTION="UPDATE"
+				;;
+			"--name" )
+				NAME="$2"
+				shift
+				;;
+			*) fail_notice_exit "Unknown argument: $1" 1 ;;
+		esac
+		shift 1
+	done
+}
+main_custom() # Duplicated on purpose, to keep main_custom clean for generation.
+{
+	local_print -e -B -S "main_custom: Started main_custom function with args:  $*"
+	if [[ "$ACTION" != "" ]];then
+		if [[ "$NAME" == "" ]]; then
+			fail_notice_exit "Missing script name. Required with action: $ACTION" 1
+		elif [ -f "$NAME" ];then
+			get_response "$0: Specified file $NAME already exists. Would you like to backup $NAME?"
+			if [ $? -eq 0 ]; then
+				backup_file "$NAME"
+				[ $? -ne 0 ] && fail_notice_exit "$0: Backup of $NAME failed!"
+			else
+				get_response "$0: Are you sure you want to overwrite $NAME?"
+				if [ $? -eq 0 ];then
+					local_print -e -Y -S "$0: Will overwrite $NAME."
+				elif [ $? -eq 1 ]; then
+					local_print -e -G -S "$0: Will not overwrite $NAME. Exiting."
+					exit 0
+				fi
+			fi
+		fi
+		case "$ACTION" in
+			"GENERATE") generate_template "$NAME" ;;
+			"UPDATE") update_template "$NAME" ;;
+			*) fail_notice_exit "main_custom: Unknown ACTION: $ACTION" 120 ;;
+		esac
+		if [ -f "$NAME" ];then
+			beautysh --files "$NAME"
+		else
+			local_print -e -R -S "$0: Failed to beautify because missing file: $NAME."
+			exit 1
+		fi
+	fi
+}
+usage_custom() # Duplicated on purpose, to keep usage_custom clean for generation.
+{
+	echo "	[[--generate|--update]|[-g|-u]]: Specify action to generate or update a script."
+	echo "	--name filename: Filename to operate on."
 }
 update_template()
 {
@@ -788,70 +924,15 @@ EOL
 }
 #### ####
 
-#### Customizable Option Parse ####
+#### Customizable Script Entry ####
 if [ $# -lt 1 ]; then
-	DEBUG=1
+	[ $DEBUG -ne 1 ] && DEBUG_DISABLED=$DEBUG && DEBUG=$(var_toggle $DEBUG)
  	local_print -e -R -S "$0: Missing arguments."
-	DEBUG=0
+	[ ! -z ${DEBUG_DISABLED} ] && DEBUG=$(var_toggle $DEBUG)
 	usage
 else
-	while getopts "$OPTIONS_TEMPLATE$OPTIONS_CUSTOM" opt
-	do
-		case "$opt" in
-			"c") CLEANUP_FLAG=$(var_toggle $CLEANUP_FLAG) ;;
-			"d") DEBUG=$(var_toggle $DEBUG) ;;
-			"f") FORCE_FLAG=$(var_toggle $FORCE_FLAG) ;;
-			"h") usage ;;
-			"l") LOGGING=$(var_toggle $LOGGING) ;;
-			"n") GENERATE=1 && NAME="$OPTARG" ;;
-			"u") UPDATE=1 && NAME="$OPTARG" ;;
-		esac
-	done
-fi
-#### ####
-
-#### Customizable Main Run ####
-[ $DEBUG -eq 1 ] && VERBOSE="v"
-[ $DEBUG -eq 0 ] && QUIET="q"
-if [ $LOGGING -eq 1 ] && [ ! -f "$LOG_FILE" ]; then
-	touch "$LOG_FILE"
-	local_print -e -B -S "Created Log File: $LOG_FILE @ $START_DATE" -l "$LOG_FILE"
-fi
-debug_state
-check_binaries "${BINARIES_REQUIRED[@]}"
-return_code=$?
-[ $return_code -ne 0 ] && fail_notice_exit "$0: Missing $return_code required binaries." 101
-check_binaries "${BINARIES_OPTIONAL[@]}"
-return_code=$?
-[ $return_code -ne 0 ] && local_print -e -B -Y "$0: Missing $return_code optional binaries."
-#### ####
-
-#### Custom Main Run ####
-if [ -f "$NAME" ];then
-	get_response "Would you like to backup $NAME"
-	if [ $? -eq 0 ]; then
-		backup_file "$NAME"
-		[ $? -ne 0 ] && fail_notice_exit "$0: Backup of $NAME failed!"
-	else
-		get_response "$0: Are you sure you want to overwrite $NAME?"
-		if [ $? -eq 0 ];then
-			local_print -e -Y -S "$0: Will overwrite $NAME."
-		elif [ $? -eq 1 ]; then
-			local_print -e -G -S "$0: Will not overwrite $NAME. Exiting."
-			exit 0
-		fi
-	fi
-fi
-if [ $GENERATE -eq 1 ];then
-	generate_template "$NAME"
-elif [ $UPDATE -eq 1 ];then
-	update_template "$NAME"
-fi
-if [ -f "$NAME" ];then
-	beautysh --files "$NAME"
-else
-	local_print -e -R -S "$0: Failed to beautify because missing file: $NAME."
-	exit 1
+	parse_args "$@"
+	main
 fi
 #### ####
 

@@ -29,7 +29,7 @@ LOGGING=0
 
 #### Custom Variables ####
 ACTION=""
-BASH_BOILER_VERSION="2.3"
+BASH_BOILER_VERSION="2.4"
 BINARIES_OPTIONAL=( 'beautysh' ) # Duplicated on purpose, to keep BINARIES_REQUIRED clean for generation.
 BLOCK_FLAG="####" # Only variable not in alphabetical order because BLOCK_FLAG depends on it.
 BLOCK_END="$BLOCK_FLAG $BLOCK_FLAG"

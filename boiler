@@ -18,8 +18,8 @@ BINARIES_MISSING=()
 ARGS_REQUIRED=1
 BINARIES_OPTIONAL=()
 BINARIES_REQUIRED=()
-CLEANUP_FLAG=0
-CLEANUP_TARGETS=()
+GARBAGE_COLLECTOR=0
+GARBAGE=()
 DEBUG=0
 FORCE_FLAG=0
 WORK_DIR="$(pwd)" # Only variable not in alphabetical order because LOG_FILE depends on it.
@@ -45,7 +45,7 @@ BLOCK_NAMES=(
 	"Custom Functions"
 	"Customizable Script Entry"
 )
-CLEANUP_FLAG=1 # Duplicated on purpose, to keep CLEANUP_FLAG clean for generation.
+GARBAGE_COLLECTOR=1 # Duplicated on purpose, to keep GARBAGE_COLLECTOR clean for generation.
 EXTERNAL_PROJECT_DESTINATION=(
 	"$WORK_DIR/cprint"
 )
@@ -65,7 +65,7 @@ NAME=""
 backup_file()
 {
 	case $# in
-		0) fail_notice_exit "(backup_file) No Arguments provided." 120 ;;
+		0) fail_notice_exit "(backup_file) No Arguments provided." 101 ;;
 		1)
 			backup_target="$1"
 			local_print -e -Y -S "(backup_file) No backup destination specified."
@@ -123,17 +123,16 @@ catch_exit()
 		# Custom exit codes
 		100) local_print -e -Y -S "Unspecified error: $code" ;;
 		101) local_print -e -R -S "Missing required variable or argument: $code" ;;
-		120) local_print -e -R -S "Misuse of $0 function: $code" ;;
 		*) local_print -e -Y -S "Unknown exit: $code" ;;
 	esac
 	catch_exit_custom "$?"
-	if [ $CLEANUP_FLAG -eq 1 ]; then
-		for t in "${CLEANUP_TARGETS[@]}"
+	if [ $GARBAGE_COLLECTOR -eq 1 ]; then
+		for t in "${GARBAGE[@]}"
 		do
-			cleanup "$t"
+			garbage_dump "$t"
 		done
 	fi
-	local_print -e -B -S "======= $0 End of Run ======="
+	local_print -e -B -S "======= End of Run for $0 ======="
 }
 check_binaries()
 {
@@ -157,21 +156,31 @@ check_binaries()
 	done
 	return $missing
 }
-cleanup()
+garbage_add()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(cleanup) No arguments received." 120
+	[ $# -lt 1 ] && fail_notice_exit "(garbage_add) No arguments received." 101
+	for a in "$@"
+	do
+		local_print -e -B -S "(garbage_add) Adding to GARBAGE pile: $a"
+		GARBAGE=( "${GARBAGE[@]}" "$a" )
+	done
+	return 0
+}
+garbage_dump()
+{
+	[ $# -lt 1 ] && fail_notice_exit "(garbage_dump) No arguments received." 101
 	for i in "$@"
 	do
 		if [ -f "$i" ];then
-			local_print -e -Y -S "(cleanup) Removing file: $i"
+			local_print -e -Y -S "(garbage_dump) Removing file: $i"
 			rm -f"$VERBOSE" "$i"
 			return_code=$?
 		elif [ -d "$i" ];then
-			local_print -e -Y -S "(cleanup) Removing directory: $i"
+			local_print -e -Y -S "(garbage_dump) Removing directory: $i"
 			rm -rf"$VERBOSE" "$i"
 			return_code=$?
 		else
-			local_print -e -R -S "(cleanup) $i doesn't exist."
+			local_print -e -R -S "(garbage_dump) $i doesn't exist."
 			return_code=0
 		fi
 	done
@@ -216,7 +225,7 @@ fail_notice_exit()
 }
 get_response()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(get_response) Missing question argument." 120
+	[ $# -lt 1 ] && fail_notice_exit "(get_response) Missing question argument." 101
 	local_print -e -B -S "(get_response) Recieved question: $1"
 	reply=""
 	[ $FORCE_FLAG -eq 1 ] && reply="y"
@@ -283,7 +292,7 @@ parse_args()
 			"--help" | "-h") usage ;;
 			"--debug") DEBUG=$(var_toggle $DEBUG) ;;
 			"--force" | "-f") FORCE_FLAG=$(var_toggle $FORCE_FLAG) ;;
-			"--cleanup") CLEANUP_FLAG=$(var_toggle $CLEANUP_FLAG) ;;
+			"--garbage-collect") GARBAGE_COLLECTOR=$(var_toggle $GARBAGE_COLLECTOR) ;;
 			"--logging"| "-l") LOGGING=$(var_toggle $LOGGING) ;;
 			"--logfile")
 				[ -d "$2" ] && fail_notice_exit "(parse_args) Invalid logfile, it is a directory: $2"
@@ -313,9 +322,9 @@ usage()
 	echo ""
 	echo "Usage for ($0)"
 	echo ""
-	echo -n "	--cleanup: Toggle cleanup flag. Removes all files/directory variables in CLEANUP_TARGETS array. Default: "
-	[ $CLEANUP_FLAG -eq 0 ] && local_print -R "$(var_state $CLEANUP_FLAG)"
-	[ $CLEANUP_FLAG -eq 1 ] && local_print -G "$(var_state $CLEANUP_FLAG)"
+	echo -n "	--garbage-collect: Toggle garbage-collect flag. Removes all files/directory variables in GARBAGE array. Default: "
+	[ $GARBAGE_COLLECTOR -eq 0 ] && local_print -R "$(var_state $GARBAGE_COLLECTOR)"
+	[ $GARBAGE_COLLECTOR -eq 1 ] && local_print -G "$(var_state $GARBAGE_COLLECTOR)"
 	echo -n "	--debug: Toggle Debugging. Default: "
 	[ $DEBUG_TMP -eq 0 ] && local_print -R "$(var_state $DEBUG_TMP)"
 	[ $DEBUG_TMP -eq 1 ] && local_print -G "$(var_state $DEBUG_TMP)"
@@ -345,7 +354,7 @@ var_toggle()
 {
 	case $1 in
 		[0-1]) echo $(( (($1 + 1 )) % 2 ));;
-		*) fail_notice_exit "(var_toggle) Can't toggle: $1" 120
+		*) fail_notice_exit "(var_toggle) Can't toggle: $1"
 	esac
 }
 #### ####
@@ -631,7 +640,7 @@ debug_state_custom() # Duplicated on purpose, to keep debug_state_custom clean f
 }
 generate_template()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(generate_template) Missing template name." 120
+	[ $# -lt 1 ] && fail_notice_exit "(generate_template) Missing template name." 101
 	touch "$1"
 	echo "" >> "$1"
 	cat > "$1" << EOL
@@ -677,7 +686,7 @@ EOL
 }
 generate_external_functions()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(generate_external_functions) Missing template name." 120
+	[ $# -lt 1 ] && fail_notice_exit "(generate_external_functions) Missing template name." 101
 	index=0
 	for p in "${EXTERNAL_PROJECT_REPOS[@]}"
 	do
@@ -686,12 +695,12 @@ generate_external_functions()
 		init_external_project "${EXTERNAL_PROJECT_DESTINATION[$index]}" "${EXTERNAL_PROJECT_INIT_OPTIONS[$index]}"
 		[ $? -ne 0 ] && fail_notice_exit "(generate_external_functions) failed to setup external project $p with init: ${EXTERNAL_PROJECT_INIT_OPTIONS[$index]}" $?
 		cat "${EXTERNAL_PROJECT_FILE_TO_IMPORT[@]}" >> "$1"
-		CLEANUP_TARGETS=( ${CLEANUP_TARGETS[@]} "${EXTERNAL_PROJECT_DESTINATION[$index]}" )
+		garbage_add "${EXTERNAL_PROJECT_DESTINATION[$index]}"
 	done
 }
 generate_template_header()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(generate_template_header) Missing template name." 120
+	[ $# -lt 1 ] && fail_notice_exit "(generate_template_header) Missing template name." 101
 	cat >> "$1" << EOL
 # BASH_BOILER_VERSION=$BASH_BOILER_VERSION
 # Generated with Bash-Boiler on $START_DATE
@@ -708,7 +717,7 @@ EOL
 git_external_project()
 {
 	case $# in
-		0) fail_notice_exit "(git_external_project) No Arguments provided." 120 ;;
+		0) fail_notice_exit "(git_external_project) No Arguments provided." 101 ;;
 		1)
 			repo_url="$1"
 			local_print -e -Y -S "(git_external_project) No destination specified."
@@ -746,7 +755,7 @@ git_external_project()
 init_external_project()
 {
 	case $# in
-		0|1) fail_notice_exit "(init_external_project) Not Enough Arguments provided." 120 ;;
+		0|1) fail_notice_exit "(init_external_project) Not Enough Arguments provided." 101 ;;
 		2)
 			project_dir="$1"
 			init_command="$2"
@@ -794,7 +803,7 @@ parse_args_custom() # Duplicated on purpose, to keep parse_args_custom clean for
 }
 process_missing_binaries()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(process_missing_binaries) Missing binary names." 120
+	[ $# -lt 1 ] && fail_notice_exit "(process_missing_binaries) Missing binary names." 101
 	return_code=0
 	for b in "$@"
 	do
@@ -814,7 +823,7 @@ process_missing_binaries()
 	done
 	if [ -f "$WORK_DIR/$(basename $0)-requirements.txt" ]; then
 		setup_virtualenv "$WORK_DIR/$(basename $0)-requirements.txt" "$WORK_DIR/$(basename $0)-pyvenv"
-		CLEANUP_TARGETS=( "${CLEANUP_TARGETS[@]}" "$WORK_DIR/$(basename $0)-requirements.txt" )
+		garbage_add "$WORK_DIR/$(basename $0)-requirements.txt"
 		if [ $? -ne 0 ]; then
 			local_print -e -S -R "(process_missing_binaries) Failed to process python binaries $WORK_DIR/$(basename $0)-requirements.txt"
 			return_code=$?
@@ -861,7 +870,7 @@ setup_virtualenv()
 		return 1
 	else
 		local_print -e -G -S "(setup_virtualenv) Successfully installed pip packages from $requirements"
-		CLEANUP_TARGETS=( "${CLEANUP_TARGETS[@]}" "$dest" )
+		garbage_add "$dest"
 	fi
 	return 0
 }
@@ -897,7 +906,7 @@ main_custom() # Duplicated on purpose, to keep main_custom clean for generation.
 		case "$ACTION" in
 			"GENERATE") generate_template "$NAME" ;;
 			"UPDATE") update_template "$NAME" ;;
-			*) fail_notice_exit "(main_custom) Unknown ACTION: $ACTION" 120 ;;
+			*) fail_notice_exit "(main_custom) Unknown ACTION: $ACTION";;
 		esac
 		if [ -f "$NAME" ];then
 			beautysh --tab --files "$NAME"
@@ -914,7 +923,7 @@ usage_custom() # Duplicated on purpose, to keep usage_custom clean for generatio
 }
 update_template()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(generate_template) Missing template name." 120
+	[ $# -lt 1 ] && fail_notice_exit "(generate_template) Missing template name." 101
 	current_version="$1"
 	new_version="$1-$BASH_BOILER_VERSION"
 	echo "" >> "$new_version"
@@ -929,7 +938,47 @@ EOL
 				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
 				generate_template_header "$new_version"
 				;;
-			"Customizable Variables" | \
+			"Customizable Variables")
+				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
+				temp_new="$WORK_DIR/temp_new"
+				temp_current="$WORK_DIR/temp_current"
+				garbage_add "$temp_new"
+				garbage_add "$temp_current"
+
+				START_RECORD=0
+				cat "$0" | while read line
+				do
+					case "$line" in
+						"$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG") START_RECORD=1 ;;
+						"$BLOCK_END") [ $START_RECORD -eq 1 ] && break ;;
+						*) [ $START_RECORD -gt 0 ] && echo "$line" >> "$temp_new" ;;
+					esac
+				done
+				START_RECORD=0
+				cat "$current_version" | while read line
+				do
+					case "$line" in
+						"$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG") START_RECORD=1 ;;
+						"$BLOCK_END") [ $START_RECORD -eq 1 ] && break ;;
+						*) [ $START_RECORD -gt 0 ] && echo "$line" >> "$temp_current" ;;
+					esac
+				done
+				for i in $(cat $temp_new)
+				do
+					found_var=0
+					i_var_name="$(echo $i | cut -d '=' -f 1)"
+					for j in $(cat $temp_current)
+					do
+						j_var_name="$(echo $j | cut -d '=' -f 1)"
+						if [ "$i_var_name" == "$j_var_name" ]; then
+							found_var=1
+							echo "$j" >> "$new_version"
+							break
+						fi
+					done
+					[ $found_var -eq 0 ] && echo "$i" >> "$new_version"
+				done
+			;;
 			"Customizable Functions" | \
 			"Customizable Main Run"| \
 			"Customizable Script Entry" | \

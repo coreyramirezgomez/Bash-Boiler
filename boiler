@@ -963,6 +963,8 @@ EOL
 						*) [ $START_RECORD -gt 0 ] && echo "$line" >> "$temp_current" ;;
 					esac
 				done
+				OIFS=$IFS
+				IFS=$'\n'
 				for i in $(cat $temp_new)
 				do
 					found_var=0
@@ -978,6 +980,7 @@ EOL
 					done
 					[ $found_var -eq 0 ] && echo "$i" >> "$new_version"
 				done
+				IFS=$OIFS
 			;;
 			"Customizable Functions" | \
 			"Customizable Main Run"| \

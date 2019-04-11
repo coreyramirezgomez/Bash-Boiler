@@ -15,6 +15,7 @@ BINARIES_MISSING=()
 #### ####
 
 #### Customizable Variables ####
+ARGS_REQUIRED=1
 BINARIES_OPTIONAL=()
 BINARIES_REQUIRED=()
 CLEANUP_FLAG=0
@@ -30,7 +31,6 @@ LOGGING=0
 ACTION=""
 BASH_BOILER_VERSION="2.3"
 BINARIES_OPTIONAL=( 'beautysh' ) # Duplicated on purpose, to keep BINARIES_REQUIRED clean for generation.
-#BINARIES_REQUIRED=( 'beautysh' ) # Duplicated on purpose, to keep BINARIES_REQUIRED clean for generation.
 BLOCK_FLAG="####" # Only variable not in alphabetical order because BLOCK_FLAG depends on it.
 BLOCK_END="$BLOCK_FLAG $BLOCK_FLAG"
 BLOCK_NAMES=(
@@ -45,6 +45,7 @@ BLOCK_NAMES=(
 	"Custom Functions"
 	"Customizable Script Entry"
 )
+CLEANUP_FLAG=1 # Duplicated on purpose, to keep CLEANUP_FLAG clean for generation.
 EXTERNAL_PROJECT_DESTINATION=(
 	"$WORK_DIR/cprint"
 )
@@ -213,44 +214,6 @@ fail_notice_exit()
 	[ ! -z ${DEBUG_DISABLED} ] && DEBUG=$(var_toggle $DEBUG)
 	exit $error_code
 }
-git_external_project()
-{
-	case $# in
-		0) fail_notice_exit "(git_external_project) No Arguments provided." 120 ;;
-		1)
-			repo_url="$1"
-			local_print -e -Y -S "(git_external_project) No destination specified."
-			dest="$WORK_DIR/$(echo $repo_url | rev | cut -d \/ -f1 | rev)"
-			local_print -e -Y -S "(git_external_project) Using default: $dest"
-			;;
-		2)
-			repo_url="$1"
-			dest="$2"
-			;;
-		*)
-			local_print -e -Y -S "(git_external_project) More that 2 arguments provided: $*"
-			local_print -e -Y -S "(git_external_project) Only using first 2."
-			repo_url="$1"
-			dest="$2"
-			;;
-	esac
-	FLAGS=""
-	[ ! -z $QUIET ] && FLAGS="-q"
-	[ ! -z $VERBOSE ] && FLAGS="-v"
-	if [ -d $dest ]; then
-		local_print -e -Y -S "(git_external_project) Project directory already exists. Attempting pull."
-		cd "$dest" || local_print -e -R -S "(git_external_project) Can't cd in $dest"
-		[ $? -ne 0 ] && return 1
-		git pull "$FLAGS"
-		return_code=$?
-		cd "$WORK_DIR" || local_print -e -R -S "(git_external_project) Can't cd in $WORK_DIR"
-		[ $? -ne 0 ] && return 1
-	else
-		git clone "$FLAGS" -- "$repo_url" "$dest"
-		return_code=$?
-	fi
-	return $return_code
-}
 get_response()
 {
 	[ $# -lt 1 ] && fail_notice_exit "(get_response) Missing question argument." 120
@@ -278,33 +241,6 @@ get_response()
 				;;
 		esac
 	done
-}
-init_external_project()
-{
-	case $# in
-		0|1) fail_notice_exit "(init_external_project) Not Enough Arguments provided." 120 ;;
-		2)
-			project_dir="$1"
-			init_command="$2"
-			;;
-		*)
-			local_print -e -Y -S "(init_external_project) More that 2 arguments provided: $*"
-			local_print -e -Y -S "(init_external_project) Only using first 2."
-			project_dir="$1"
-			init_command="$2"
-			;;
-	esac
-	if [ ! -d "$project_dir" ]; then
-		local_print -e -R -S "(init_external_project) Not a directory: $project_dir"
-		return 1
-	fi
-	cd "$project_dir" || local_print -e -Y -S "(init_external_project) Can't cd in $project_dir"
-	[ $? -ne 0 ] && return 1
-	$init_command
-	return_code=$?
-	cd "$WORK_DIR" || local_print -e -R -S "(init_external_project) Can't cd in $WORK_DIR"
-	[ $? -ne 0 ] && return 1
-	return $return_code
 }
 local_print()
 {
@@ -769,6 +705,71 @@ generate_template_header()
 trap catch_exit \$?
 EOL
 }
+git_external_project()
+{
+	case $# in
+		0) fail_notice_exit "(git_external_project) No Arguments provided." 120 ;;
+		1)
+			repo_url="$1"
+			local_print -e -Y -S "(git_external_project) No destination specified."
+			dest="$WORK_DIR/$(echo $repo_url | rev | cut -d \/ -f1 | rev)"
+			local_print -e -Y -S "(git_external_project) Using default: $dest"
+			;;
+		2)
+			repo_url="$1"
+			dest="$2"
+			;;
+		*)
+			local_print -e -Y -S "(git_external_project) More that 2 arguments provided: $*"
+			local_print -e -Y -S "(git_external_project) Only using first 2."
+			repo_url="$1"
+			dest="$2"
+			;;
+	esac
+	FLAGS=""
+	[ ! -z $QUIET ] && FLAGS="-q"
+	[ ! -z $VERBOSE ] && FLAGS="-v"
+	if [ -d $dest ]; then
+		local_print -e -Y -S "(git_external_project) Project directory already exists. Attempting pull."
+		cd "$dest" || local_print -e -R -S "(git_external_project) Can't cd in $dest"
+		[ $? -ne 0 ] && return 1
+		git pull "$FLAGS"
+		return_code=$?
+		cd "$WORK_DIR" || local_print -e -R -S "(git_external_project) Can't cd in $WORK_DIR"
+		[ $? -ne 0 ] && return 1
+	else
+		git clone "$FLAGS" -- "$repo_url" "$dest"
+		return_code=$?
+	fi
+	return $return_code
+}
+init_external_project()
+{
+	case $# in
+		0|1) fail_notice_exit "(init_external_project) Not Enough Arguments provided." 120 ;;
+		2)
+			project_dir="$1"
+			init_command="$2"
+			;;
+		*)
+			local_print -e -Y -S "(init_external_project) More that 2 arguments provided: $*"
+			local_print -e -Y -S "(init_external_project) Only using first 2."
+			project_dir="$1"
+			init_command="$2"
+			;;
+	esac
+	if [ ! -d "$project_dir" ]; then
+		local_print -e -R -S "(init_external_project) Not a directory: $project_dir"
+		return 1
+	fi
+	cd "$project_dir" || local_print -e -Y -S "(init_external_project) Can't cd in $project_dir"
+	[ $? -ne 0 ] && return 1
+	$init_command
+	return_code=$?
+	cd "$WORK_DIR" || local_print -e -R -S "(init_external_project) Can't cd in $WORK_DIR"
+	[ $? -ne 0 ] && return 1
+	return $return_code
+}
 parse_args_custom() # Duplicated on purpose, to keep parse_args_custom clean for generation.
 {
 	local_print -e -B -S "(parse_args_custom) Started parse_args_custom function with args:  $*."
@@ -976,7 +977,7 @@ EOL
 #### ####
 
 #### Customizable Script Entry ####
-if [ $# -lt 1 ]; then
+if [ $# -lt 1 ] && [ $ARGS_REQUIRED -eq 1 ]; then
 	[ $DEBUG -ne 1 ] && DEBUG_DISABLED=$DEBUG && DEBUG=$(var_toggle $DEBUG)
  	local_print -e -R -S "($0) Missing arguments."
 	[ ! -z ${DEBUG_DISABLED} ] && DEBUG=$(var_toggle $DEBUG)

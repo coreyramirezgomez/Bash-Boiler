@@ -29,7 +29,7 @@ LOGGING=0
 
 #### Custom Variables ####
 ACTION=""
-BASH_BOILER_VERSION="2.4"
+BASH_BOILER_VERSION="2019.06.14.01"
 BINARIES_OPTIONAL=( 'beautysh' ) # Duplicated on purpose, to keep BINARIES_REQUIRED clean for generation.
 BLOCK_FLAG="####" # Only variable not in alphabetical order because BLOCK_FLAG depends on it.
 BLOCK_END="$BLOCK_FLAG $BLOCK_FLAG"
@@ -65,65 +65,65 @@ NAME=""
 backup_file()
 {
 	case $# in
-		0) fail_notice_exit "(backup_file) No Arguments provided." 101 ;;
+		0) fail_notice_exit "(${FUNCNAME[0]}) No Arguments provided." 101 ;;
 		1)
 			backup_target="$1"
-			local_print -e -Y -S "(backup_file) No backup destination specified."
+			debug_print -e -Y -S "(${FUNCNAME[0]}) No backup destination specified."
 			backup_dest="$WORK_DIR/$1-backup-$(date +%m-%d-%y_%H:%M:%S)"
-			local_print -e -Y -S "(backup_file) Using default: $backup_dest"
+			debug_print -e -Y -S "(${FUNCNAME[0]}) Using default: $backup_dest"
 			;;
 		2)
 			backup_target="$1"
 			backup_dest="$2"
 			;;
 		*)
-			local_print -e -Y -S "(backup_file) More that 2 arguments provided: $*"
-			local_print -e -Y -S "(backup_file) Only using first 2."
+			debug_print -e -Y -S "(${FUNCNAME[0]}) More that 2 arguments provided: $*"
+			debug_print -e -Y -S "(${FUNCNAME[0]}) Only using first 2."
 			backup_target="$1"
 			backup_dest="$2"
 			;;
 		esac
 
 	if [ ! -f "$backup_target" ]; then
-		local_print -R -S "(backup_file) No file to backup @ $backup_target"
+		local_print -R -S "(${FUNCNAME[0]}) No file to backup @ $backup_target"
 		return 1
 	fi
 	if	[ -d "$backup_dest" ]; then
-		local_print -R -S "(backup_file) Backup destination is a directory: $backup_dest"
+		local_print -R -S "(${FUNCNAME[0]}) Backup destination is a directory: $backup_dest"
 		return 1
 	fi
 	if [ -f "$backup_dest" ]; then
-		local_print -Y -S "(backup_file) File already exists @ $backup_dest"
-		get_response "(backup_file) Would you like to backup $backup_dest?"
+		local_print -Y -S "(${FUNCNAME[0]}) File already exists @ $backup_dest"
+		get_response "(${FUNCNAME[0]}) Would you like to backup $backup_dest?"
 		[ $? -eq 1 ] && return 1
 		backup_file "$backup_dest"
 		[ $? -ne 0 ] && return 1
 	fi
 	cp -f"$VERBOSE" -- "$backup_target" "$backup_dest"
-	[ $? -ne 0 ] && fail_notice_exit "(backup_file) Backup failure for $backup_target" $?
-	local_print -e -B -S "Successfully created backup of $backup_target to $backup_dest"
+	[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Backup failure for $backup_target" $?
+	debug_print -e -B -S "Successfully created backup of $backup_target to $backup_dest"
 	return 0
 }
 catch_exit()
 {
 	code=$?
-	local_print -e -B -S "START DATE: $START_DATE"
-	local_print -e -B -S "END DATE: $(date +%m-%d-%y_%H:%M:%S)"
-	local_print -e -B -S "$0 ran for  $(( $(date +%s) - $START_TIME ))s"
+	debug_print -e -B -S "START DATE: $START_DATE"
+	debug_print -e -B -S "END DATE: $(date +%m-%d-%y_%H:%M:%S)"
+	debug_print -e -B -S "$0 ran for  $(( $(date +%s) - $START_TIME ))s"
 	case $code in
 		# Exit codes from https://www.tldp.org/LDP/abs/html/exitcodes.html
-		0) local_print -e -G -S "Successful Exit: $code" ;;
-		1) local_print -e -R -S "General Fatal Exit: $code " ;;
-		2) local_print -e -R -S "Misuse of shell builtins: $code" ;;
-		126) local_print -e -R -S "Command invoked cannot execute: $code" ;;
-		127) local_print -e -R -S "Command not found: $code" ;;
-		128) local_print -e -R -S "Invalid argument to exit: $code" ;;
-		129|13[0-9]|14[0-9]|15[0-9]|16[0-5])local_print -e -R -S "Fatal error signal: $code" ;;
-		130) local_print -e -Y -S "Script terminated by Control-C: $code" ;;
+		0) debug_print -e -G -S "Successful Exit: $code" ;;
+		1) debug_print -e -R -S "General Fatal Exit: $code " ;;
+		2) debug_print -e -R -S "Misuse of shell builtins: $code" ;;
+		126) debug_print -e -R -S "Command invoked cannot execute: $code" ;;
+		127) debug_print -e -R -S "Command not found: $code" ;;
+		128) debug_print -e -R -S "Invalid argument to exit: $code" ;;
+		129|13[0-9]|14[0-9]|15[0-9]|16[0-5])debug_print -e -R -S "Fatal error signal: $code" ;;
+		130) debug_print -e -Y -S "Script terminated by Control-C: $code" ;;
 		# Custom exit codes
-		100) local_print -e -Y -S "Unspecified error: $code" ;;
-		101) local_print -e -R -S "Missing required variable or argument: $code" ;;
-		*) local_print -e -Y -S "Unknown exit: $code" ;;
+		100) debug_print -e -Y -S "Unspecified error: $code" ;;
+		101) debug_print -e -R -S "Missing required variable or argument: $code" ;;
+		*) debug_print -e -Y -S "Unknown exit: $code" ;;
 	esac
 	catch_exit_custom "$?"
 	if [ $GARBAGE_COLLECTOR -eq 1 ]; then
@@ -132,24 +132,24 @@ catch_exit()
 			garbage_dump "$t"
 		done
 	fi
-	local_print -e -B -S "======= End of Run for $0 ======="
+	debug_print -e -B -S "======= End of Run for $0 ======="
 }
 check_binaries()
 {
-	local_print -e -B -S "(check_binaries) PATH=$PATH"
+	debug_print -e -B -S "(${FUNCNAME[0]}) PATH=$PATH"
 	if [ $# -lt 1 ];then
-		local_print -e -Y -S "(check_binaries) No binary package list to check."
+		debug_print -e -Y -S "(${FUNCNAME[0]}) No binary package list to check."
 		return 0
 	fi
 	missing=0
 	arr=("$@")
-	local_print -e -B -S "(check_binaries) Received binary package list: ${arr[*]}"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Received binary package list: ${arr[*]}"
 	for p in "${arr[@]}"
 	do
 		if which "$p"  >&/dev/null; then
-			local_print -e -G -S "(check_binaries) Found $p"
+			debug_print -e -G -S "(${FUNCNAME[0]}) Found $p"
 		else
-			local_print -e -Y -S "(check_binaries) Missing binary package: $p"
+			debug_print -e -Y -S "(${FUNCNAME[0]}) Missing binary package: $p"
 			BINARIES_MISSING=( "${BINARIES_MISSING[@]}" "$p" )
 			((missing++))
 		fi
@@ -158,29 +158,29 @@ check_binaries()
 }
 garbage_add()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(garbage_add) No arguments received." 101
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) No arguments received." 101
 	for a in "$@"
 	do
-		local_print -e -B -S "(garbage_add) Adding to GARBAGE pile: $a"
+		debug_print -e -B -S "(${FUNCNAME[0]}) Adding to GARBAGE pile: $a"
 		GARBAGE=( "${GARBAGE[@]}" "$a" )
 	done
 	return 0
 }
 garbage_dump()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(garbage_dump) No arguments received." 101
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) No arguments received." 101
 	for i in "$@"
 	do
 		if [ -f "$i" ];then
-			local_print -e -Y -S "(garbage_dump) Removing file: $i"
+			debug_print -e -Y -S "(${FUNCNAME[0]}) Removing file: $i"
 			rm -f"$VERBOSE" "$i"
 			return_code=$?
 		elif [ -d "$i" ];then
-			local_print -e -Y -S "(garbage_dump) Removing directory: $i"
+			debug_print -e -Y -S "(${FUNCNAME[0]}) Removing directory: $i"
 			rm -rf"$VERBOSE" "$i"
 			return_code=$?
 		else
-			local_print -e -R -S "(garbage_dump) $i doesn't exist."
+			debug_print -e -R -S "(${FUNCNAME[0]}) $i doesn't exist."
 			return_code=0
 		fi
 	done
@@ -188,18 +188,18 @@ garbage_dump()
 }
 debug_state()
 {
-	local_print -e -B -S "(debug_state) Current Template Variable State: "
-	local_print -e -B -S "(debug_state) WORK_DIR: $WORK_DIR"
-	local_print -e -B -S "(debug_state) FORCE_FLAG: $(var_state $FORCE_FLAG)"
-	local_print -e -B -S "(debug_state) DEBUG: $(var_state $DEBUG)"
-	local_print -e -B -S "(debug_state) VERBOSE: $VERBOSE"
-	local_print -e -B -S "(debug_state) QUIET: $QUIET"
-	local_print -e -B -S "(debug_state) START_DATE: $START_DATE"
-	local_print -e -B -S "(debug_state) START_TIME: $START_TIME"
-	local_print -e -B -S "(debug_state) LOG_FILE: $LOG_FILE"
-	local_print -e -B -S "(debug_state) LOGGING: $(var_state $LOGGING)"
-	local_print -e -B -S "(debug_state) BINARIES_REQUIRED: ${BINARIES_REQUIRED[*]}"
-	local_print -e -B -S "(debug_state) BINARIES_OPTIONAL: ${BINARIES_OPTIONAL[*]}"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Current Template Variable State: "
+	debug_print -e -B -S "(${FUNCNAME[0]}) WORK_DIR: $WORK_DIR"
+	debug_print -e -B -S "(${FUNCNAME[0]}) FORCE_FLAG: $(var_state $FORCE_FLAG)"
+	debug_print -e -B -S "(${FUNCNAME[0]}) DEBUG: $(var_state $DEBUG)"
+	debug_print -e -B -S "(${FUNCNAME[0]}) VERBOSE: $VERBOSE"
+	debug_print -e -B -S "(${FUNCNAME[0]}) QUIET: $QUIET"
+	debug_print -e -B -S "(${FUNCNAME[0]}) START_DATE: $START_DATE"
+	debug_print -e -B -S "(${FUNCNAME[0]}) START_TIME: $START_TIME"
+	debug_print -e -B -S "(${FUNCNAME[0]}) LOG_FILE: $LOG_FILE"
+	debug_print -e -B -S "(${FUNCNAME[0]}) LOGGING: $(var_state $LOGGING)"
+	debug_print -e -B -S "(${FUNCNAME[0]}) BINARIES_REQUIRED: ${BINARIES_REQUIRED[*]}"
+	debug_print -e -B -S "(${FUNCNAME[0]}) BINARIES_OPTIONAL: ${BINARIES_OPTIONAL[*]}"
 	debug_state_custom
 }
 fail_notice_exit()
@@ -211,57 +211,58 @@ fail_notice_exit()
 		desc="$1"
 		error_code=100
 	elif [ $# -gt 2 ]; then
-		local_print -e -Y "(fail_notice_exit) Received more than 2 required args: $*"
+		debug_print -e -Y "(${FUNCNAME[0]}) Received more than 2 required args: $*"
 		desc="$1"
 		error_code="$2"
 	else
 		desc="$1"
 		error_code="$2"
 	fi
-	[ $DEBUG -ne 1 ] && DEBUG_DISABLED=$DEBUG && DEBUG=$(var_toggle $DEBUG)
 	local_print -e -R -S "Failure: $desc"
-	[ ! -z ${DEBUG_DISABLED} ] && DEBUG=$(var_toggle $DEBUG)
 	exit $error_code
 }
 get_response()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(get_response) Missing question argument." 101
-	local_print -e -B -S "(get_response) Recieved question: $1"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing question argument." 101
+	debug_print -e -B -S "(${FUNCNAME[0]}) Received question: $1"
 	reply=""
 	[ $FORCE_FLAG -eq 1 ] && reply="y"
 	while :
 	do
 		case "$reply" in
 			"N" | "n")
-				local_print -e -B -S "(get_response) Returning $reply (1) reply."
+				debug_print -e -B -S "(${FUNCNAME[0]}) Returning $reply (1) reply."
 				return 1
 				;;
 			"Y" | "y")
-				local_print -e -B -S "(get_response) Returning $reply (0) reply."
+				debug_print -e -B -S "(${FUNCNAME[0]}) Returning $reply (0) reply."
 				return 0
 				;;
 			*)
-				[ $DEBUG -ne 1 ] && DEBUG_DISABLED=$DEBUG && DEBUG=$(var_toggle $DEBUG)
 				local_print -e -Y -n "$1 (Y/N): "
 				read -n 1 reply
 				echo ""
-				[ ! -z ${DEBUG_DISABLED} ] && DEBUG=$(var_toggle $DEBUG)
-				local_print -e -B -S "(get_response) Question answered with: $reply"
+				debug_print -e -B -S "(${FUNCNAME[0]}) Question answered with: $reply"
 				;;
 		esac
 	done
 }
 local_print()
 {
-	if [ $LOGGING -eq 1 ] && [ $DEBUG -eq 1 ];then
+	if [ $LOGGING -eq 1 ]; then
 		print -e -l "$LOG_FILE" "$@"
 		return 0
-	fi
-	if [ $LOGGING -eq 1 ] && [ $DEBUG -eq 0 ];then
-		print -e -q -l "$LOG_FILE" "$@"
+	else
+		print -e "$@"
 		return 0
 	fi
-	if [ $LOGGING -eq 0 ] && [ $DEBUG -eq 1 ];then
+}
+debug_print()
+{
+	if [ $LOGGING -eq 1 ]; then
+		print -e -l "$LOG_FILE" "$@"
+		return 0
+	elif [ $DEBUG -eq 1 ]; then
 		print -e "$@"
 		return 0
 	fi
@@ -272,16 +273,16 @@ main()
 	[ $DEBUG -eq 0 ] && QUIET="q"
 	if [ $LOGGING -eq 1 ] && [ ! -f "$LOG_FILE" ]; then
 		touch "$LOG_FILE"
-		local_print -e -B -S "Created Log File: $LOG_FILE @ $START_DATE" -l "$LOG_FILE"
+		debug_print -e -B -S "(${FUNCNAME[0]}) Created Log File: $LOG_FILE @ $START_DATE" -l "$LOG_FILE"
 	fi
 	debug_state
 	check_binaries "${BINARIES_REQUIRED[@]}"
 	return_code=$?
-	[ $return_code -ne 0 ] && fail_notice_exit "(main) Missing $return_code required binaries." 101
+	[ $return_code -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing $return_code required binaries." 101
 	check_binaries "${BINARIES_OPTIONAL[@]}"
 	return_code=$?
-	[ $return_code -ne 0 ] && local_print -e -Y -S "(main) Missing $return_code optional binaries."
-	[ ${#BINARIES_MISSING[@]} -gt 0 ] && local_print -e -Y -S "(main) Missing the following binaries: ${BINARIES_MISSING[*]}"
+	[ $return_code -ne 0 ] && debug_print -Y -S "(${FUNCNAME[0]}) Missing $return_code optional binaries."
+	[ ${#BINARIES_MISSING[@]} -gt 0 ] && debug_print -Y -S "(${FUNCNAME[0]}) Missing the following binaries: ${BINARIES_MISSING[*]}"
 	main_custom
 }
 parse_args()
@@ -295,17 +296,17 @@ parse_args()
 			"--garbage-collect") GARBAGE_COLLECTOR=$(var_toggle $GARBAGE_COLLECTOR) ;;
 			"--logging"| "-l") LOGGING=$(var_toggle $LOGGING) ;;
 			"--logfile")
-				[ -d "$2" ] && fail_notice_exit "(parse_args) Invalid logfile, it is a directory: $2"
+				[ -d "$2" ] && fail_notice_exit "(${FUNCNAME[0]}) Invalid logfile, it is a directory: $2"
 				LOG_FILE="$2"
 				shift
 				;;
 			"--work_dir")
-				[ ! -d "$2" ] && fail_notice_exit "(parse_args) Invalid directory: $2"
+				[ ! -d "$2" ] && fail_notice_exit "(${FUNCNAME[0]}) Invalid directory: $2"
 				WORK_DIR="$2"
 				shift
 				;;
 			*)
-				local_print -B "(parse_args) Extra Arg Received, saving for (parse_args_custom) $1"
+				debug_print -B "(${FUNCNAME[0]}) Extra Arg Received ($1), saving for custom parser."
 				EXTRA_ARGS=( "${EXTRA_ARGS[@]}" "$1" )
 				;;
 		esac
@@ -315,31 +316,25 @@ parse_args()
 }
 usage()
 {
-	DEBUG_TMP=$DEBUG
-	LOGGING_TMP=$LOGGING
-	DEBUG=1
-	LOGGING=0
 	echo ""
-	echo "Usage for ($0)"
+	echo "Usage for $0:"
 	echo ""
 	echo -n "	--garbage-collect: Toggle garbage-collect flag. Removes all files/directory variables in GARBAGE array. Default: "
 	[ $GARBAGE_COLLECTOR -eq 0 ] && local_print -R "$(var_state $GARBAGE_COLLECTOR)"
 	[ $GARBAGE_COLLECTOR -eq 1 ] && local_print -G "$(var_state $GARBAGE_COLLECTOR)"
 	echo -n "	--debug: Toggle Debugging. Default: "
-	[ $DEBUG_TMP -eq 0 ] && local_print -R "$(var_state $DEBUG_TMP)"
-	[ $DEBUG_TMP -eq 1 ] && local_print -G "$(var_state $DEBUG_TMP)"
+	[ $DEBUG -eq 0 ] && local_print -R "$(var_state $DEBUG)"
+	[ $DEBUG -eq 1 ] && local_print -G "$(var_state $DEBUG)"
 	echo -n "	--force: Answer 'yes'/'y' to all questions. (aka force) Default: "
 	[ $FORCE_FLAG -eq 0 ] && local_print -R "$(var_state $FORCE_FLAG)"
 	[ $FORCE_FLAG -eq 1 ] && local_print -G "$(var_state $FORCE_FLAG)"
 	echo "	[--help|-h]: Display this dialog"
 	echo -n "	[--logging|-l]: Toggle logging. Default: "
-	[ $LOGGING_TMP -eq 0 ] && local_print -R "$(var_state $LOGGING_TMP)"
-	[ $LOGGING_TMP -eq 1 ] && local_print -G "$(var_state $LOGGING_TMP)"
+	[ $LOGGING -eq 0 ] && local_print -R "$(var_state $LOGGING)"
+	[ $LOGGING -eq 1 ] && local_print -G "$(var_state $LOGGING)"
 	echo "	--logfile filename: Specifiy the logfile output. Default: $LOG_FILE"
 	usage_custom
 	echo ""
-	DEBUG=$DEBUG_TMP
-	LOGGING=$LOGGING_TMP
 	exit 0
 }
 var_state()
@@ -354,7 +349,7 @@ var_toggle()
 {
 	case $1 in
 		[0-1]) echo $(( (($1 + 1 )) % 2 ));;
-		*) fail_notice_exit "(var_toggle) Can't toggle: $1"
+		*) fail_notice_exit "(${FUNCNAME[0]}) Can't toggle: $1"
 	esac
 }
 #### ####
@@ -591,29 +586,30 @@ print()
 #### Customizable Functions ####
 catch_exit_custom()
 {
-	local_print -e -B -S "(catch_exit_custom) Started catch_exit_custom function with args:  $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
 }
 debug_state_custom()
 {
-	local_print -e -B -S "(debug_state_custom) Started debug_state_custom function."
-	local_print -e -B -S "(debug_state_custom) Current Custom Variable State: "
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Current Custom Variable State: "
 }
 main_custom()
 {
-	local_print -e -B -S "(main_custom) Started main_custom function with args:  $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
 }
 parse_args_custom()
 {
-	local_print -e -B -S "(parse_args_custom) Started parse_args_custom function with args:  $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
 	while [ ${#} -gt 0 ]; do
 		case "${1}" in
-			*) fail_notice_exit "(parse_args_custom) Unknown argument: $1" 1 ;;
+			*) fail_notice_exit "(${FUNCNAME[0]}) Unknown argument: $1" 1 ;;
 		esac
 		shift 1
 	done
 }
 usage_custom()
 {
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
 	echo ""
 }
 #### ####
@@ -621,26 +617,27 @@ usage_custom()
 #### Custom Functions ####
 catch_exit_custom() # Duplicated on purpose, to keep catch_exit_custom clean for generation.
 {
-		local_print -e -B -S "(catch_exit_custom) Started catch_exit_custom function with args:  $*"
+		debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
 }
 debug_state_custom() # Duplicated on purpose, to keep debug_state_custom clean for generation.
 {
-	local_print -e -B -S "(debug_state_custom) Started debug_state_custom function."
-	local_print -e -B -S "(debug_state_custom) Current Custom Variable State: "
-	local_print -e -B -S "(debug_state) ACTION: $ACTION"
-	local_print -e -B -S "(debug_state) BASH_BOILER_VERSION: $BASH_BOILER_VERSION"
-	local_print -e -B -S "(debug_state) BLOCK_FLAG: $BLOCK_FLAG"
-	local_print -e -B -S "(debug_state) BLOCK_END: $BLOCK_END"
-	local_print -e -B -S "(debug_state) BLOCK_NAMES: ${BLOCK_NAMES[*]}"
-	local_print -e -B -S "(debug_state) EXTERNAL_PROJECT_DESTINATION: ${EXTERNAL_PROJECT_DESTINATION[*]}"
-	local_print -e -B -S "(debug_state) EXTERNAL_PROJECT_FILE_TO_IMPORT: ${EXTERNAL_PROJECT_FILE_TO_IMPORT[*]}"
-	local_print -e -B -S "(debug_state) EXTERNAL_PROJECT_INIT_OPTIONS: ${EXTERNAL_PROJECT_INIT_OPTIONS[*]}"
-	local_print -e -B -S "(debug_state) EXTERNAL_PROJECT_REPOS: ${EXTERNAL_PROJECT_REPOS[*]}"
-	local_print -e -B -S "(debug_state) NAME: $NAME"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Current Custom Variable State: "
+	debug_print -e -B -S "(${FUNCNAME[0]}) ACTION: $ACTION"
+	debug_print -e -B -S "(${FUNCNAME[0]}) BASH_BOILER_VERSION: $BASH_BOILER_VERSION"
+	debug_print -e -B -S "(${FUNCNAME[0]}) BLOCK_FLAG: $BLOCK_FLAG"
+	debug_print -e -B -S "(${FUNCNAME[0]}) BLOCK_END: $BLOCK_END"
+	debug_print -e -B -S "(${FUNCNAME[0]}) BLOCK_NAMES: ${BLOCK_NAMES[*]}"
+	debug_print -e -B -S "(${FUNCNAME[0]}) EXTERNAL_PROJECT_DESTINATION: ${EXTERNAL_PROJECT_DESTINATION[*]}"
+	debug_print -e -B -S "(${FUNCNAME[0]}) EXTERNAL_PROJECT_FILE_TO_IMPORT: ${EXTERNAL_PROJECT_FILE_TO_IMPORT[*]}"
+	debug_print -e -B -S "(${FUNCNAME[0]}) EXTERNAL_PROJECT_INIT_OPTIONS: ${EXTERNAL_PROJECT_INIT_OPTIONS[*]}"
+	debug_print -e -B -S "(${FUNCNAME[0]}) EXTERNAL_PROJECT_REPOS: ${EXTERNAL_PROJECT_REPOS[*]}"
+	debug_print -e -B -S "(${FUNCNAME[0]}) NAME: $NAME"
 }
 generate_template()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(generate_template) Missing template name." 101
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing template name." 101
 	touch "$1"
 	echo "" >> "$1"
 	cat > "$1" << EOL
@@ -648,7 +645,7 @@ generate_template()
 EOL
 	for BLOCK_START in "${BLOCK_NAMES[@]}"
 	do
-		local_print -e -B -S "(generate_template) Building $BLOCK_START"
+		debug_print -e -B -S "(${FUNCNAME[0]}) Building $BLOCK_START"
 		case "$BLOCK_START" in
 			"Non-Customizable Header")
 				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$1"
@@ -676,7 +673,7 @@ EOL
 				done
 				;;
 		esac
-		local_print -e -B -S "(generate_template) Finished $BLOCK_START"
+		debug_print -e -B -S "(${FUNCNAME[0]}) Finished $BLOCK_START"
 		echo "$BLOCK_END" >> "$1"
 		echo "" >> "$1"
 	done
@@ -686,21 +683,21 @@ EOL
 }
 generate_external_functions()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(generate_external_functions) Missing template name." 101
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing template name." 101
 	index=0
 	for p in "${EXTERNAL_PROJECT_REPOS[@]}"
 	do
 		git_external_project "$p" "${EXTERNAL_PROJECT_DESTINATION[$index]}"
-		[ $? -ne 0 ] && fail_notice_exit "(generate_external_functions) failed to get external project $p" $?
+		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) failed to get external project $p" $?
 		init_external_project "${EXTERNAL_PROJECT_DESTINATION[$index]}" "${EXTERNAL_PROJECT_INIT_OPTIONS[$index]}"
-		[ $? -ne 0 ] && fail_notice_exit "(generate_external_functions) failed to setup external project $p with init: ${EXTERNAL_PROJECT_INIT_OPTIONS[$index]}" $?
+		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) failed to setup external project $p with init: ${EXTERNAL_PROJECT_INIT_OPTIONS[$index]}" $?
 		cat "${EXTERNAL_PROJECT_FILE_TO_IMPORT[@]}" >> "$1"
 		garbage_add "${EXTERNAL_PROJECT_DESTINATION[$index]}"
 	done
 }
 generate_template_header()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(generate_template_header) Missing template name." 101
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing template name." 101
 	cat >> "$1" << EOL
 # BASH_BOILER_VERSION=$BASH_BOILER_VERSION
 # Generated with Bash-Boiler on $START_DATE
@@ -717,20 +714,20 @@ EOL
 git_external_project()
 {
 	case $# in
-		0) fail_notice_exit "(git_external_project) No Arguments provided." 101 ;;
+		0) fail_notice_exit "(${FUNCNAME[0]}) No Arguments provided." 101 ;;
 		1)
 			repo_url="$1"
-			local_print -e -Y -S "(git_external_project) No destination specified."
+			debug_print -e -Y -S "(${FUNCNAME[0]}) No destination specified."
 			dest="$WORK_DIR/$(echo $repo_url | rev | cut -d \/ -f1 | rev)"
-			local_print -e -Y -S "(git_external_project) Using default: $dest"
+			debug_print -e -Y -S "(${FUNCNAME[0]}) Using default: $dest"
 			;;
 		2)
 			repo_url="$1"
 			dest="$2"
 			;;
 		*)
-			local_print -e -Y -S "(git_external_project) More that 2 arguments provided: $*"
-			local_print -e -Y -S "(git_external_project) Only using first 2."
+			debug_print -e -Y -S "(${FUNCNAME[0]}) More that 2 arguments provided: $*"
+			debug_print -e -Y -S "(${FUNCNAME[0]}) Only using first 2."
 			repo_url="$1"
 			dest="$2"
 			;;
@@ -739,12 +736,12 @@ git_external_project()
 	[ ! -z $QUIET ] && FLAGS="-q"
 	[ ! -z $VERBOSE ] && FLAGS="-v"
 	if [ -d $dest ]; then
-		local_print -e -Y -S "(git_external_project) Project directory already exists. Attempting pull."
-		cd "$dest" || local_print -e -R -S "(git_external_project) Can't cd in $dest"
+		debug_print -e -Y -S "(${FUNCNAME[0]}) Project directory already exists. Attempting pull."
+		cd "$dest" || local_print -e -R -S "(${FUNCNAME[0]}) Can't cd in $dest"
 		[ $? -ne 0 ] && return 1
 		git pull "$FLAGS"
 		return_code=$?
-		cd "$WORK_DIR" || local_print -e -R -S "(git_external_project) Can't cd in $WORK_DIR"
+		cd "$WORK_DIR" || local_print -e -R -S "(${FUNCNAME[0]}) Can't cd in $WORK_DIR"
 		[ $? -ne 0 ] && return 1
 	else
 		git clone "$FLAGS" -- "$repo_url" "$dest"
@@ -755,68 +752,68 @@ git_external_project()
 init_external_project()
 {
 	case $# in
-		0|1) fail_notice_exit "(init_external_project) Not Enough Arguments provided." 101 ;;
+		0|1) fail_notice_exit "(${FUNCNAME[0]}) Not Enough Arguments provided." 101 ;;
 		2)
 			project_dir="$1"
 			init_command="$2"
 			;;
 		*)
-			local_print -e -Y -S "(init_external_project) More that 2 arguments provided: $*"
-			local_print -e -Y -S "(init_external_project) Only using first 2."
+			debug_print -e -Y -S "(${FUNCNAME[0]}) More that 2 arguments provided: $*"
+			debug_print -e -Y -S "(${FUNCNAME[0]}) Only using first 2."
 			project_dir="$1"
 			init_command="$2"
 			;;
 	esac
 	if [ ! -d "$project_dir" ]; then
-		local_print -e -R -S "(init_external_project) Not a directory: $project_dir"
+		local_print -e -R -S "(${FUNCNAME[0]}) Not a directory: $project_dir"
 		return 1
 	fi
-	cd "$project_dir" || local_print -e -Y -S "(init_external_project) Can't cd in $project_dir"
+	cd "$project_dir" || local_print -e -Y -S "(${FUNCNAME[0]}) Can't cd in $project_dir"
 	[ $? -ne 0 ] && return 1
 	$init_command
 	return_code=$?
-	cd "$WORK_DIR" || local_print -e -R -S "(init_external_project) Can't cd in $WORK_DIR"
+	cd "$WORK_DIR" || local_print -e -R -S "(${FUNCNAME[0]}) Can't cd in $WORK_DIR"
 	[ $? -ne 0 ] && return 1
 	return $return_code
 }
 parse_args_custom() # Duplicated on purpose, to keep parse_args_custom clean for generation.
 {
-	local_print -e -B -S "(parse_args_custom) Started parse_args_custom function with args:  $*."
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
 	while [ ${#} -gt 0 ]; do
 		case "${1}" in
 			"--generate" | "-g")
-				[[ "$ACTION" != "" ]] && fail_notice_exit "(parse_args_custom) Another action is already defined. Only use one action at a time: --generate or --update." 1
+				[[ "$ACTION" != "" ]] && fail_notice_exit "(${FUNCNAME[0]}) Another action is already defined. Only use one action at a time: --generate or --update." 1
 				ACTION="GENERATE"
 				;;
 			"--update" | "-u")
-				[[ "$ACTION" != "" ]] && fail_notice_exit "(parse_args_custom) Another action is already defined. Only use one action at a time: --generate or --update." 1
+				[[ "$ACTION" != "" ]] && fail_notice_exit "(${FUNCNAME[0]}) Another action is already defined. Only use one action at a time: --generate or --update." 1
 				ACTION="UPDATE"
 				;;
 			"--name" )
 				NAME="$2"
 				shift
 				;;
-			*) fail_notice_exit "(parse_args_custom) Unknown argument: $1" 1 ;;
+			*) fail_notice_exit "(${FUNCNAME[0]}) Unknown argument: $1" 1 ;;
 		esac
 		shift 1
 	done
 }
 process_missing_binaries()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(process_missing_binaries) Missing binary names." 101
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing binary names." 101
 	return_code=0
 	for b in "$@"
 	do
 		case "$b" in
 			"beautysh")
-				local_print -e -B -S "(process_missing_binaries) $b is a python package, adding to list."
+				debug_print -e -B -S "(${FUNCNAME[0]}) $b is a python package, adding to list."
 				touch "$WORK_DIR/$(basename $0)-requirements.txt"
 				echo "$b" >> "$WORK_DIR/$(basename $0)-requirements.txt"
 				check_binaries "virtualenv" "pip"
-				[ $? -ne 0 ] && fail_notice_exit "(process_missing_binaries) Missing $? required binaries." 101
+				[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing $? required binaries." 101
 				;;
 			*)
-				local_print -e -R -S "(process_missing_binaries) No processing defined for $1."
+				debug_print -e -Y -S "(${FUNCNAME[0]}) No processing defined for $1."
 				return_code=1
 				;;
 		esac
@@ -825,7 +822,7 @@ process_missing_binaries()
 		setup_virtualenv "$WORK_DIR/$(basename $0)-requirements.txt" "$WORK_DIR/$(basename $0)-pyvenv"
 		garbage_add "$WORK_DIR/$(basename $0)-requirements.txt"
 		if [ $? -ne 0 ]; then
-			local_print -e -S -R "(process_missing_binaries) Failed to process python binaries $WORK_DIR/$(basename $0)-requirements.txt"
+			local_print -e -S -R "(${FUNCNAME[0]}) Failed to process python binaries $WORK_DIR/$(basename $0)-requirements.txt"
 			return_code=$?
 		fi
 	fi
@@ -837,7 +834,7 @@ setup_virtualenv()
 		1)
 			requirements="$1"
 			dest="$WORK_DIR/$(basename $0)_pyvenv"
-			local_print -e -Y -S "(setup_virtualenv) Missing destination argument, using default: $dest"
+			debug_print -e -Y -S "(${FUNCNAME[0]}) Missing destination argument, using default: $dest"
 			;;
 		2)
 			requirements="$1"
@@ -846,59 +843,59 @@ setup_virtualenv()
 		*)
 			requirements="$1"
 			dest="$2"
-			local_print -e -Y -S "(setup_virtualenv) Received more arguments than required, only using first 2: $*"
+			debug_print -e -Y -S "(${FUNCNAME[0]}) Received more arguments than required, only using first 2: $*"
 			;;
 	esac
-	local_print -e -B -S "(setup_virtualenv) Received requirements argument: $requirements"
-	local_print -e -B -S "(setup_virtualenv) Received destination argument: $dest"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Received requirements argument: $requirements"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Received destination argument: $dest"
 	if [ ! -d "$dest" ]; then
 		virtualenv -"$VERBOSE""$QUIET" -- "$dest"
 		if [ $? -ne 0 ]; then
-			local_print -e -R -S "(setup_virtualenv) Failed to create virtualenv @ $dest"
+			local_print -e -R -S "(${FUNCNAME[0]}) Failed to create virtualenv @ $dest"
 			return 1
 		else
-			local_print -e -G -S "(setup_virtualenv) Successfully create virtualenv @ $dest"
+			debug_print -e -G -S "(${FUNCNAME[0]}) Successfully create virtualenv @ $dest"
 		fi
 	fi
 	if [ ! -f "$dest/bin/pip" ]; then
-		local_print -e -R -S "(setup_virtualenv) Missing pip at @ $dest/bin/"
+		local_print -e -R -S "(${FUNCNAME[0]}) Missing pip at @ $dest/bin/"
 		return 1
 	fi
 	$dest/bin/pip -"$VERBOSE""$QUIET" install -r "$requirements"
 	if [ $? -ne 0 ]; then
-		local_print -e -R -S "(setup_virtualenv) Failed to install pip packages from $requirements"
+		local_print -e -R -S "(${FUNCNAME[0]}) Failed to install pip packages from $requirements"
 		return 1
 	else
-		local_print -e -G -S "(setup_virtualenv) Successfully installed pip packages from $requirements"
+		debug_print -e -G -S "(${FUNCNAME[0]}) Successfully installed pip packages from $requirements"
 		garbage_add "$dest"
 	fi
 	return 0
 }
 main_custom() # Duplicated on purpose, to keep main_custom clean for generation.
 {
-	local_print -e -B -S "(main_custom) Started main_custom function with args:  $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
 	if [ ${#BINARIES_MISSING[@]} -gt 0 ]; then
 		process_missing_binaries "${BINARIES_MISSING[*]}"
-		[ $? -ne 0 ] && fail_notice_exit "(main_custom) Could not process missing binaries." 1
+		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Could not process missing binaries." 1
 		export PATH="$WORK_DIR/$(basename $0)-pyvenv/bin:"$PATH
 		check_binaries "${BINARIES_REQUIRED[@]}"
-		[ $? -ne 0 ] && fail_notice_exit "(main_custom) Binaries still missing after processing." 1
+		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Binaries still missing after processing." 1
 		check_binaries "${BINARIES_OPTIONAL[@]}"
-		[ $? -ne 0 ] && fail_notice_exit "(main_custom) Binaries still missing after processing." 1
+		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Binaries still missing after processing." 1
 	fi
 	if [[ "$ACTION" != "" ]];then
-		[[ "$NAME" == "" ]] && fail_notice_exit "(main_custom) Missing script name. Required with action: $ACTION" 1
+		[[ "$NAME" == "" ]] && fail_notice_exit "(${FUNCNAME[0]}) Missing script name. Required with action: $ACTION" 1
 		if [ -f "$NAME" ];then
-			get_response "(main_custom) Specified file $NAME already exists. Would you like to backup $NAME?"
+			get_response "(${FUNCNAME[0]}) Specified file $NAME already exists. Would you like to backup $NAME?"
 			if [ $? -eq 0 ]; then
 				backup_file "$NAME"
-				[ $? -ne 0 ] && fail_notice_exit "(main_custom) Backup of $NAME failed!"
+				[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Backup of $NAME failed!"
 			else
-				get_response "(main_custom) Are you sure you want to overwrite $NAME?"
+				get_response "(${FUNCNAME[0]}) Are you sure you want to overwrite $NAME?"
 				if [ $? -eq 0 ];then
-					local_print -e -Y -S "(main_custom) Will overwrite $NAME."
+					local_print -e -Y -S "(${FUNCNAME[0]}) Overwriting $NAME."
 				elif [ $? -eq 1 ]; then
-					local_print -e -G -S "(main_custom) Will not overwrite $NAME. Exiting."
+					local_print -e -G -S "(${FUNCNAME[0]}) Will not overwrite $NAME. Exiting."
 					exit 0
 				fi
 			fi
@@ -906,12 +903,12 @@ main_custom() # Duplicated on purpose, to keep main_custom clean for generation.
 		case "$ACTION" in
 			"GENERATE") generate_template "$NAME" ;;
 			"UPDATE") update_template "$NAME" ;;
-			*) fail_notice_exit "(main_custom) Unknown ACTION: $ACTION";;
+			*) fail_notice_exit "(${FUNCNAME[0]}) Unknown ACTION: $ACTION";;
 		esac
 		if [ -f "$NAME" ];then
 			beautysh --tab --files "$NAME"
 		else
-			local_print -e -R -S "(main_custom) Failed to beautify because missing file: $NAME."
+			local_print -e -R -S "(${FUNCNAME[0]}) Failed to beautify because missing file: $NAME."
 			exit 1
 		fi
 	fi
@@ -923,7 +920,7 @@ usage_custom() # Duplicated on purpose, to keep usage_custom clean for generatio
 }
 update_template()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(generate_template) Missing template name." 101
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing template name." 101
 	current_version="$1"
 	new_version="$1-$BASH_BOILER_VERSION"
 	echo "" >> "$new_version"
@@ -932,7 +929,7 @@ update_template()
 EOL
 	for BLOCK_START in "${BLOCK_NAMES[@]}"
 	do
-		local_print -e -B -S "(generate_template) Building $BLOCK_START"
+		debug_print -e -B -S "(generate_template) Building $BLOCK_START"
 		case "$BLOCK_START" in
 			"Non-Customizable Header")
 				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
@@ -1017,7 +1014,7 @@ EOL
 				done
 				;;
 		esac
-		local_print -e -B -S "(generate_template) Finished $BLOCK_START"
+		debug_print -e -B -S "(generate_template) Finished $BLOCK_START"
 		echo "$BLOCK_END" >> "$new_version"
 		echo "" >> "$new_version"
 	done
@@ -1030,9 +1027,7 @@ EOL
 
 #### Customizable Script Entry ####
 if [ $# -lt 1 ] && [ $ARGS_REQUIRED -eq 1 ]; then
-	[ $DEBUG -ne 1 ] && DEBUG_DISABLED=$DEBUG && DEBUG=$(var_toggle $DEBUG)
  	local_print -e -R -S "($0) Missing arguments."
-	[ ! -z ${DEBUG_DISABLED} ] && DEBUG=$(var_toggle $DEBUG)
 	usage
 else
 	parse_args "$@"

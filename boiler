@@ -1,5 +1,14 @@
 #!/bin/bash
 #### Non-Customizable Header ####
+# BASH_BOILER_VERSION=2019.07.02.01
+# Generated with Bash-Boiler on 07-02-19_09:37:58
+# Use updater to update this script:
+# https://github.com/coreyramirezgomez/Bash-Boiler.git
+# Modifying any content between blocks like the following:
+# "#### Non-Customizable ... #####"
+# ....
+# "#### ####"
+# will be overwritten by Bash-Boiler updater function.
 trap catch_exit $?
 #### ####
 
@@ -29,7 +38,7 @@ LOGGING=0
 
 #### Custom Variables ####
 ACTION=""
-BASH_BOILER_VERSION="2019.06.14.01"
+BASH_BOILER_VERSION="2019.07.02.01"
 BINARIES_OPTIONAL=( 'beautysh' ) # Duplicated on purpose, to keep BINARIES_REQUIRED clean for generation.
 BLOCK_FLAG="####" # Only variable not in alphabetical order because BLOCK_FLAG depends on it.
 BLOCK_END="$BLOCK_FLAG $BLOCK_FLAG"
@@ -47,13 +56,13 @@ BLOCK_NAMES=(
 )
 GARBAGE_COLLECTOR=1 # Duplicated on purpose, to keep GARBAGE_COLLECTOR clean for generation.
 EXTERNAL_PROJECT_DESTINATION=(
-	"$WORK_DIR/cprint"
+	"$WORK_DIR/cprint_temp"
 )
 EXTERNAL_PROJECT_FILE_TO_IMPORT=(
-	"$WORK_DIR/cprint/cprint.tmp"
+	"$WORK_DIR/cprint_temp/cprint.tmp"
 )
 EXTERNAL_PROJECT_INIT_OPTIONS=(
-	"bash cprint -E cprint.tmp"
+	"bash cprint --export cprint.tmp"
 )
 EXTERNAL_PROJECT_REPOS=(
 	"https://github.com/coreyramirezgomez/cprint.git"
@@ -69,7 +78,7 @@ backup_file()
 		1)
 			backup_target="$1"
 			debug_print -e -Y -S "(${FUNCNAME[0]}) No backup destination specified."
-			backup_dest="$WORK_DIR/$1-backup-$(date +%m-%d-%y_%H:%M:%S)"
+			backup_dest="$1-backup-$(date +%m-%d-%y_%H:%M:%S)"
 			debug_print -e -Y -S "(${FUNCNAME[0]}) Using default: $backup_dest"
 			;;
 		2)
@@ -82,7 +91,7 @@ backup_file()
 			backup_target="$1"
 			backup_dest="$2"
 			;;
-		esac
+	esac
 
 	if [ ! -f "$backup_target" ]; then
 		local_print -R -S "(${FUNCNAME[0]}) No file to backup @ $backup_target"
@@ -111,7 +120,7 @@ catch_exit()
 	debug_print -e -B -S "END DATE: $(date +%m-%d-%y_%H:%M:%S)"
 	debug_print -e -B -S "$0 ran for  $(( $(date +%s) - $START_TIME ))s"
 	case $code in
-		# Exit codes from https://www.tldp.org/LDP/abs/html/exitcodes.html
+			# Exit codes from https://www.tldp.org/LDP/abs/html/exitcodes.html
 		0) debug_print -e -G -S "Successful Exit: $code" ;;
 		1) debug_print -e -R -S "General Fatal Exit: $code " ;;
 		2) debug_print -e -R -S "Misuse of shell builtins: $code" ;;
@@ -120,7 +129,7 @@ catch_exit()
 		128) debug_print -e -R -S "Invalid argument to exit: $code" ;;
 		129|13[0-9]|14[0-9]|15[0-9]|16[0-5])debug_print -e -R -S "Fatal error signal: $code" ;;
 		130) debug_print -e -Y -S "Script terminated by Control-C: $code" ;;
-		# Custom exit codes
+			# Custom exit codes
 		100) debug_print -e -Y -S "Unspecified error: $code" ;;
 		101) debug_print -e -R -S "Missing required variable or argument: $code" ;;
 		*) debug_print -e -Y -S "Unknown exit: $code" ;;
@@ -250,20 +259,20 @@ get_response()
 local_print()
 {
 	if [ $LOGGING -eq 1 ]; then
-		print -e -l "$LOG_FILE" "$@"
+		cprint -e -l "$LOG_FILE" "$@"
 		return 0
 	else
-		print -e "$@"
+		cprint -e "$@"
 		return 0
 	fi
 }
 debug_print()
 {
 	if [ $LOGGING -eq 1 ]; then
-		print -e -l "$LOG_FILE" "$@"
+		cprint -e -l "$LOG_FILE" "$@"
 		return 0
 	elif [ $DEBUG -eq 1 ]; then
-		print -e "$@"
+		cprint -e "$@"
 		return 0
 	fi
 }
@@ -348,238 +357,229 @@ var_state()
 var_toggle()
 {
 	case $1 in
-		[0-1]) echo $(( (($1 + 1 )) % 2 ));;
+		[0-1]) echo $(( (($1 + 1 )) % 2 )) ;;
 		*) fail_notice_exit "(${FUNCNAME[0]}) Can't toggle: $1"
 	esac
 }
 #### ####
 
 #### Non-Customizable External Template Functions ####
-print()
+
+cprint()
 {
-	local OPTIND
-	if [ "$(uname -s)" == "Darwin" ];then
-		Black='\033[0;30m'        # Black
-		Red='\033[0;31m'          # Red
-		Green='\033[0;32m'        # Green
-		Yellow='\033[0;33m'       # Yellow
-		Blue='\033[0;34m'         # Blue
-		Purple='\033[0;35m'       # Purple
-		Cyan='\033[0;36m'         # Cyan
-		White='\033[0;37m'        # White
-		# Bold
-		BBlack='\033[1;30m'       # Black
-		BRed='\033[1;31m'         # Red
-		BGreen='\033[1;32m'       # Green
-		BYellow='\033[1;33m'      # Yellow
-		BBlue='\033[1;34m'        # Blue
-		BPurple='\033[1;35m'      # Purple
-		BCyan='\033[1;36m'        # Cyan
-		BWhite='\033[1;37m'       # White
-		# Background
-		On_Black='\033[40m'       # Black
-		On_Red='\033[41m'         # Red
-		On_Green='\033[42m'       # Green
-		On_Yellow='\033[43m'      # Yellow
-		On_Blue='\033[44m'        # Blue
-		On_Purple='\033[45m'      # Purple
-		On_Cyan='\033[46m'        # Cyan
-		On_White='\033[47m'       # White
-		NC='\033[m'               # Color Reset
-	else
-		Black='\e[0;30m'        # Black
-		Red='\e[0;31m'          # Red
-		Green='\e[0;32m'        # Green
-		Yellow='\e[0;33m'       # Yellow
-		Blue='\e[0;34m'         # Blue
-		Purple='\e[0;35m'       # Purple
-		Cyan='\e[0;36m'         # Cyan
-		White='\e[0;37m'        # White
-		# Bold
-		BBlack='\e[1;30m'       # Black
-		BRed='\e[1;31m'         # Red
-		BGreen='\e[1;32m'       # Green
-		BYellow='\e[1;33m'      # Yellow
-		BBlue='\e[1;34m'        # Blue
-		BPurple='\e[1;35m'      # Purple
-		BCyan='\e[1;36m'        # Cyan
-		BWhite='\e[1;37m'       # White
-		# Background
-		On_Black='\e[40m'       # Black
-		On_Red='\e[41m'         # Red
-		On_Green='\e[42m'       # Green
-		On_Yellow='\e[43m'      # Yellow
-		On_Blue='\e[44m'        # Blue
-		On_Purple='\e[45m'      # Purple
-		On_Cyan='\e[46m'        # Cyan
-		On_White='\e[47m'       # White
-		NC="\e[m"               # Color Reset
-	fi
-	which cowsay >&/dev/null && local BIN_COW="$(which cowsay)" || local BIN_COW=""
-	which figlet >&/dev/null && local BIN_FIG="$(which figlet)" || local BIN_FIG=""
-	which printf >&/dev/null && local BIN_PRINTF="$(which printf)" || local BIN_PRINTF=""
-	local BOLD=0
-	local COLOR_BACKGROUND=""
-	local COLOR_FOREGROUND=""
-	local DEBUG=0
-	local ERR_OUT=0
-	local LOG_NOT_STYLED=""
-	local LOG_STYLED=""
-	local NL=1
-	local PNL=0
-	local POS=0
-	local QUIET=0
-	local RAINBOW=0
-	local RANDOM_COLOR=0
-	local STRING=""
-	local STYLE=""
-	local VERBOSITY=""
-	while getopts "hvTE:enpIAFcb:f:KRGYBPCWqZzL:l:S:" opt
-	do
-		case "$opt" in
-			"h") usage ;;
-			"v") VERBOSITY="-v" && DEBUG=1;;
-			"e") ERR_OUT=1 ;;
-			"n") NL=0 ;;
-			"p") ((PNL++)) ;;
-			"I") BOLD=1 ;;
-			"A") [ -f "$BIN_COW" ] && STYLE="$BIN_COW" ;;
-			"F") [ -f "$BIN_FIG" ] && STYLE="$BIN_FIG" ;;
-			"c") [ $(tput cols) -le 80 ] && POS=0 || POS=$((( $(tput cols) - 80 ) / 2 )) ;;
-			"b")
-				case "$OPTARG" in
-					"black") COLOR_BACKGROUND="$On_Black" ;;
-					"red") COLOR_BACKGROUND="$On_Red" ;;
-					"green") COLOR_BACKGROUND="$On_Green" ;;
-					"yellow") COLOR_BACKGROUND="$On_Yellow" ;;
-					"blue") COLOR_BACKGROUND="$On_Blue" ;;
-					"purple") COLOR_BACKGROUND="$On_Purple" ;;
-					"cyan") COLOR_BACKGROUND="$On_Cyan" ;;
-					"white") COLOR_BACKGROUND="$On_White" ;;
-					"*") [ $DEBUG -eq 1 ] && (>&2 echo "Unrecognized Arguement: $OPTARG") ;;
+	CPRINT_process_nl()
+	{
+		if [ -z ${CPRINT_NL} ]; then
+			[ ! -z ${CPRINT_ERR_OUT} ] && (>&2 echo "") || echo ""
+		fi
+	}
+	CPRINT_process_prenl()
+	{
+		if [ ! -z ${PCPRINT_NL} ]; then
+			while [ $PCPRINT_NL -gt 0 ]
+			do
+				[ ! -z ${CPRINT_ERR_OUT} ] && (>&2 echo "") || echo ""
+				[ ! -z ${CPRINT_LOG_CPRINT_STYLED} ] && echo ""  >> "$CPRINT_LOG_CPRINT_STYLED"
+				[ ! -z ${CPRINT_LOG} ] && echo ""  >> "$CPRINT_LOG"
+				((PCPRINT_NL--))
+			done
+		fi
+	}
+	CPRINT_process_string()
+	{
+		[ -z "${CPRINT_STRING}" ] && CPRINT_STRING=""
+		[ ! -z ${CPRINT_LOG} ] && echo "$CPRINT_STRING" >> "$CPRINT_LOG"
+		[ -z ${CPRINT_POS} ] && CPRINT_POS=0 # Position is not set, so use the default.
+		[ ! -z ${CPRINT_STYLE} ] && CPRINT_STRING="$($CPRINT_STYLE $CPRINT_STRING)" # Apply style
+		[ -z "${CPRINT_FOREGROUND}" ] && CPRINT_FOREGROUND=""
+		[ -z "${CPRINT_BACKGROUND}" ] && CPRINT_BACKGROUND=""
+		RESET=$(CPRINT_translate_color_code "RESET")
+		if [ -f "$(which printf 2>/dev/null)" ];then
+			[ ! -z ${CPRINT_ERR_OUT} ] && (>&2 printf -- "$CPRINT_FOREGROUND$CPRINT_BACKGROUND%$CPRINT_POS"s"$RESET" "$CPRINT_STRING") || printf -- "$CPRINT_FOREGROUND$CPRINT_BACKGROUND%$CPRINT_POS"s"$RESET" "$CPRINT_STRING"
+		else # printf doesn't exist
+			[ ! -z ${CPRINT_ERR_OUT} ] && (>&2 echo "$CPRINT_FOREGROUND""$CPRINT_BACKGROUND""$CPRINT_STRING""$RESET") || echo "$CPRINT_FOREGROUND""$CPRINT_BACKGROUND""$CPRINT_STRING""$RESET"
+		fi
+		[ ! -z ${CPRINT_LOG_CPRINT_STYLED} ] && echo -e "$CPRINT_STRING" >> "$CPRINT_LOG_CPRINT_STYLED"
+	}
+	CPRINT_random_color()
+	{
+		local colors=( "BLACK" "WHITE" "RED" "YELLOW" "GREEN" "BLUE" "CYAN" "PURPLE" )
+		echo "${colors[$RANDOM % ${#colors[@]}]}"
+	}
+	CPRINT_translate_color_code()
+	{
+		if [ $# -lt 1 ]; then
+			echo "Missing color name."
+			exit 1
+		fi
+		local CODE=""
+		case "$1" in
+			"FG"*)
+				case "$1" in
+					*"BLACK" ) CODE='30m' ;;
+					*"WHITE" ) CODE='37m' ;;
+					*"RED" ) CODE='31m' ;;
+					*"YELLOW" ) CODE='33m' ;;
+					*"GREEN" ) CODE='32m' ;;
+					*"BLUE" ) CODE='34m' ;;
+					*"CYAN" ) CODE='36m' ;;
+					*"PURPLE" ) CODE='35m' ;;
+				esac
+				if [ ! -z ${CPRINT_BOLD} ]; then
+					if [ $CPRINT_BOLD -eq 1 ]; then
+						CODE='1;'$CODE
+					fi
+				else
+					CODE='0;'$CODE
+				fi
+				;;
+			"BG"*)
+				case "$1" in
+					*"BLACK" ) CODE='40m' ;;
+					*"WHITE" ) CODE='47m' ;;
+					*"RED" ) CODE='41m' ;;
+					*"YELLOW" ) CODE='43m' ;;
+					*"GREEN" ) CODE='42m' ;;
+					*"BLUE" ) CODE='44m' ;;
+					*"CYAN" ) CODE='46m' ;;
+					*"PURPLE" ) CODE='45m' ;;
 				esac
 				;;
-			"f")
-				case "$OPTARG" in
-					"black") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Black" || COLOR_FOREGROUND="$BBlack" ;;
-					"red") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Red" || COLOR_FOREGROUND="$BRed" ;;
-					"green") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Green" || COLOR_FOREGROUND="$BGreen" ;;
-					"yellow") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Yellow" || COLOR_FOREGROUND="$BYellow" ;;
-					"blue") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Blue" || COLOR_FOREGROUND="$BBlue" ;;
-					"purple") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Purple" || COLOR_FOREGROUND="$BPurple" ;;
-					"cyan") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Cyan" || COLOR_FOREGROUND="$BCyan" ;;
-					"white") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$White" || COLOR_FOREGROUND="$BWhite" ;;
-					"*") [ $DEBUG -eq 1 ] && (>&2 echo "Unrecognized Arguement: $OPTARG") ;;
-				esac
-				;;
-			"K") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Black" || COLOR_FOREGROUND="$BBlack" ;;
-			"R") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Red" || COLOR_FOREGROUND="$BRed" ;;
-			"G") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Green" || COLOR_FOREGROUND="$BGreen" ;;
-			"Y") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Yellow" || COLOR_FOREGROUND="$BYellow" ;;
-			"B") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Blue" || COLOR_FOREGROUND="$BBlue" ;;
-			"P") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Purple" || COLOR_FOREGROUND="$BPurple" ;;
-			"C") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$Cyan" || COLOR_FOREGROUND="$BCyan" ;;
-			"W") [ $BOLD -eq 0 ] && COLOR_FOREGROUND="$White" || COLOR_FOREGROUND="$BWhite";;
-			"q") QUIET=1;;
-			"Z") RANDOM_COLOR=1 ;;
-			"z") RAINBOW=1 ;;
-			"L") LOG_STYLED="$OPTARG" ;;
-			"l") LOG_NOT_STYLED="$OPTARG" ;;
-			"S") STRING="$OPTARG";;
+			"RESET") CODE='m' ;;
 		esac
-	done
-#debug()
-	if [ $DEBUG -eq 1 ]; then
-		(>&2 echo "BIN_COW: $BIN_COW")
-		(>&2 echo "BIN_FIG: $BIN_FIG")
-		(>&2 echo "BIN_PRINTF: $BIN_PRINTF")
-		(>&2 echo "BOLD: $BOLD")
-		(>&2 echo "COLOR_FOREGROUND: $COLOR_FOREGROUND")
-		(>&2 echo "COLOR_BACKGROUND: $COLOR_BACKGROUND")
-		(>&2 echo "DEBUG: $DEBUG")
-		(>&2 echo "ERR_OUT: $ERR_OUT")
-		(>&2 echo "LOG_STYLED: $LOG_STYLED")
-		(>&2 echo "LOG_NOT_STYLED: $LOG_NOT_STYLED")
-		(>&2 echo "NL: $NL")
-		(>&2 echo "PNL: $PNL")
-		(>&2 echo "POS: $POS")
-		(>&2 echo "QUIET: $QUIET")
-		(>&2 echo "STRING: $STRING")
-		(>&2 echo "STYLE: $STYLE")
-		(>&2 echo "RAINBOW: $RAINBOW")
-		(>&2 echo "VERBOSITY: $VERBOSITY")
-	fi
-	if [[ "$STRING" == "" ]];then
-		shift "$((OPTIND - 1))"
-		STRING="$*"
-	fi
-	if [[ "$STRING" != "" ]]; then
-#process_prenl()
-		while [ $PNL -ne 0 ]
+		case "$(uname -s)" in
+			"Darwin") echo "\033[""$CODE" ;;
+			"Linux") echo "\e[""$CODE" ;;
+			*)
+				echo "Unknown System: $(uname -s)"
+				exit 1
+				;;
+		esac
+	}
+	CPRINT_parse_args()
+	{
+		while [ ${#} -gt 0 ];
 		do
-			if [ $QUIET -ne 1 ];then
-				if [ -f $BIN_PRINTF ];then
-					[ $ERR_OUT -eq 1 ] && (>&2 printf "\n") || printf "\n"
-				else
-					[ $ERR_OUT -eq 1 ] && (>&2 echo "") || echo ""
-				fi
-			fi
-			[ ! -z ${LOG_STYLED} ] && echo ""  >> "$LOG_STYLED"
-			[ ! -z ${LOG_NOT_STYLED} ] && echo ""  >> "$LOG_NOT_STYLED"
-			((PNL--))
+			case "${1}" in
+				"-e" | "--stderr") CPRINT_ERR_OUT=1 ;;
+				"-n" | "no-newline") CPRINT_NL=1 ;;
+				"-p" | "--pre-newline")
+					[ -z ${PCPRINT_NL} ] && PCPRINT_NL=0
+					((PCPRINT_NL++))
+					;;
+				"-I" | "-b" | "--bold" ) CPRINT_BOLD=1 ;;
+				"-A" | "--cowsay")
+					if [ -f "$(which cowsay 2>/dev/null)" ]; then
+						CPRINT_STYLE="$(which cowsay)"
+					else
+						(>&2 echo "Skipping $1 becasue, binary not available.")
+					fi
+					;;
+				"-F" | "--figlet")
+					if [ -f "$(which figlet 2>/dev/null)" ]; then
+						CPRINT_STYLE="$(which figlet)"
+					else
+						(>&2 echo "Skipping $1 becasue, binary not available.")
+					fi
+					;;
+				"--cow-file" | "--fig-file")
+					if [ ! -z "${CPRINT_STYLE}" ]; then
+						if [ ! -f "$2" ]; then
+							(>&2 echo "Skipping $1 because, not a valid file: $2.")
+						else
+							CPRINT_STYLE="$CPRINT_STYLE -f $2"
+						fi
+					else
+						(>&2 echo "Skipping $1 because, CPRINT_STYLE not set.")
+					fi
+					;;
+				"-c" | "--centered") [ $(tput cols) -le 80 ] && CPRINT_POS=0 || CPRINT_POS=$((( $(tput cols) - 80 ) / 2 )) ;;
+				"--BG" | "--bg" | "--background" | "--FG" | "--fg"| "--foreground")
+					local TYPE=""
+					local COLOR_CODE=""
+					case "$1" in
+						"--BG" | "--bg" | "--background") TYPE="BG" ;;
+						"--FG" | "--fg" | "--foreground") TYPE="FG" ;;
+					esac
+					case "$2" in
+						"black") COLOR_CODE="$(CPRINT_translate_color_code "$TYPE"'BLACK')" ;;
+						"white") COLOR_CODE="$(CPRINT_translate_color_code "$TYPE"'WHITE')" ;;
+						"red") COLOR_CODE="$(CPRINT_translate_color_code "$TYPE"'RED')" ;;
+						"yellow") COLOR_CODE="$(CPRINT_translate_color_code "$TYPE"'YELLOW')" ;;
+						"green") COLOR_CODE="$(CPRINT_translate_color_code "$TYPE"'GREEN')" ;;
+						"blue") COLOR_CODE="$(CPRINT_translate_color_code "$TYPE"'BLUE')" ;;
+						"cyan") COLOR_CODE="$(CPRINT_translate_color_code "$TYPE"'CYAN')" ;;
+						"purple") COLOR_CODE="$(CPRINT_translate_color_code "$TYPE"'PURPLE')" ;;
+						"random") COLOR_CODE="$(CPRINT_translate_color_code "$TYPE""$(CPRINT_random_color)")" ;;
+						"*")
+							(>&2 echo "Unrecognized Arguement: $2")
+							exit 1
+							;;
+					esac
+					case "$1" in
+						"--BG" | "--bg" | "--background") CPRINT_BACKGROUND="$COLOR_CODE" ;;
+						"--FG" | "--fg" | "--foreground") CPRINT_FOREGROUND="$COLOR_CODE" ;;
+					esac
+					shift
+					;;
+				"-K" | "--black") CPRINT_FOREGROUND="$(CPRINT_translate_color_code 'FGBLACK')" ;;
+				"-W" | "--white") CPRINT_FOREGROUND="$(CPRINT_translate_color_code 'FGWHITE')" ;;
+				"-R" | "--red") CPRINT_FOREGROUND="$(CPRINT_translate_color_code 'FGRED')" ;;
+				"-Y" | "--yellow") CPRINT_FOREGROUND="$(CPRINT_translate_color_code 'FGYELLOW')" ;;
+				"-G" | "--green") CPRINT_FOREGROUND="$(CPRINT_translate_color_code 'FGGREEN')" ;;
+				"-B" | "--blue") CPRINT_FOREGROUND="$(CPRINT_translate_color_code 'FGBLUE')" ;;
+				"-C" | "--cyan") CPRINT_FOREGROUND="$(CPRINT_translate_color_code 'FGCYAN')" ;;
+				"-P" | "--purple") CPRINT_FOREGROUND="$(CPRINT_translate_color_code 'FGPURPLE')" ;;
+				"-Z" | "--random") CPRINT_FOREGROUND="$(CPRINT_translate_color_code "FG$(CPRINT_random_color)")" ;;
+				"-L" | "--log-styled")
+					if [ -d "$2" ]; then
+						echo "Specified filename is a directory: $2"
+						exit 1
+					fi
+					CPRINT_LOG_CPRINT_STYLED="$2"
+					shift
+					;;
+				"-l" | "--log")
+					if [ -d "$2" ]; then
+						echo "Specified filename is a directory: $2"
+						exit 1
+					fi
+					CPRINT_LOG="$2"
+					shift
+					;;
+				"-S" | "--string")
+					shift
+					CPRINT_STRING="$*"
+					break
+					;;
+				*)
+					CPRINT_STRING="$*"
+					break
+					;;
+			esac
+			shift 1
 		done
-#process_string()
-		string_proc="$STRING"
-		[ ! -z ${LOG_NOT_STYLED} ] && echo "$string_proc" >> "$LOG_NOT_STYLED"
-		[ $RAINBOW -eq 1 ] || [ $RANDOM_COLOR -eq 1 ] && colors=( "$Red" "$Green" "$Gellow" "$Blue" "$Purple" "$Cyan" )
-		if [ $POS -eq 0 ]; then # Non-Centered Strings
-			[ ! -z ${STYLE} ] && string_proc="$($STYLE $string_proc)" # Apply style
-			[ ! -z ${COLOR_BACKGROUND} ] && string_proc="$COLOR_BACKGROUND$string_proc" # Apply background color
-			if [ $RAINBOW -eq 0 ]; then # rainbow not invoked, so just apply the foreground
-				[ $RANDOM_COLOR -eq 1 ] && COLOR_FOREGROUND="${colors[$RANDOM % ${#colors[@]}]}"
-				[ ! -z ${COLOR_FOREGROUND} ] && string_proc="$COLOR_FOREGROUND$string_proc"
-			elif [ -z ${STYLE} ]; then # Rainbow invoked. Only apply rainbow if not styled.
-				string_proc_r=""
-				words=($string_proc)
-				for c in "${words[@]}" # Loop through each word separated by spaces
-				do
-					COLOR_FOREGROUND="${colors[$RANDOM % ${#colors[@]}]}"
-					[ $DEBUG -eq 1 ] && (>&2 echo "Random seed: $RANDOM")
-					string_proc_r="$string_proc_r$COLOR_FOREGROUND$c "
-				done
-				string_proc=$string_proc_r$NC # Assign final result back to string_proc
-			fi
-			if [ ! -z ${COLOR_FOREGROUND} ] || [ ! -z ${COLOR_BACKGROUND} ]; then
-				string_proc="$string_proc$NC" # Append color reset if foreground/background is set.
-			fi
-			if [ $QUIET -ne 1 ]; then
-				if [ -f $BIN_PRINTF ];then
-					[ $ERR_OUT -eq 1 ] && (>&2 printf -- "$string_proc") || printf -- "$string_proc"
-				else # printf doesn't exist
-					[ $ERR_OUT -eq 1 ] && (>&2 echo "$string_proc") || echo "$string_proc"
-				fi
-			fi
-		else # Centered Strings
-			if [ $QUIET -ne 1 ];then
-				if [ -f $BIN_PRINTF ];then
-					[ $ERR_OUT -eq 1 ] && (>&2 printf -- "$COLOR_FOREGROUND$COLOR_BACKGROUND%$POS"s"$NC" "$string_proc") || printf -- "$COLOR_FOREGROUND$COLOR_BACKGROUND%$POS"s"$NC" "$string_proc"
-				else # printf doesn't exist
-					[ $ERR_OUT -eq 1 ] && (>&2 echo "$COLOR_FOREGROUND""$COLOR_BACKGROUND""$string_proc""$NC") || echo "$COLOR_FOREGROUND""$COLOR_BACKGROUND""$string_proc""$NC"
-				fi
-			fi
-		fi
-		[ ! -z ${LOG_STYLED} ] && echo -e "$string_proc" >> "$LOG_STYLED"
-#process_nl
-		if [ $QUIET -ne 1 ]; then
-			if [ $NL -eq 1 ];then
-		 		if [ -f $BIN_PRINTF ];then
-					[ $ERR_OUT -eq 1 ] && (>&2 printf "\n") || printf "\n"
-				else
-					[ $ERR_OUT -eq 1 ] && (>&2 echo "") || echo ""
-				fi
-			fi
-		fi
+	}
+	CPRINT_parse_args "$@"
+	if [ -z "${CPRINT_STRING}" ]; then
+		CPRINT_STRING="$*"
 	fi
+	if [ ! -z "${CPRINT_STRING}" ]; then
+		CPRINT_process_prenl
+		CPRINT_process_string
+		CPRINT_process_nl
+	fi
+	unset CPRINT_ERR_OUT
+	unset CPRINT_NL
+	unset CPRINT_PNL
+	unset CPRINT_BOLD
+	unset CPRINT_STYLE
+	unset CPRINT_POS
+	unset CPRINT_BACKGROUND
+	unset CPRINT_FOREGROUND
+	unset CPRINT_LOG
+	unset CPRINT_LOG_STYLED
+	unset CPRINT_STRING
 }
 #### ####
 
@@ -617,7 +617,7 @@ usage_custom()
 #### Custom Functions ####
 catch_exit_custom() # Duplicated on purpose, to keep catch_exit_custom clean for generation.
 {
-		debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
 }
 debug_state_custom() # Duplicated on purpose, to keep debug_state_custom clean for generation.
 {
@@ -651,16 +651,14 @@ EOL
 				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$1"
 				generate_template_header "$1"
 				;;
-			"Custom Header" | \
-			"Custom Variables" | \
-			"Custom Functions")
+			"Custom Header" | 			"Custom Variables" | 			"Custom Functions")
 				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$1"
 				;;
 			"Non-Customizable External Template Functions")
 				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$1"
 				generate_external_functions "$1"
 				;;
-				*)
+			*)
 				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$1"
 				START_RECORD=0
 				cat "$0" | while read line
@@ -718,7 +716,7 @@ git_external_project()
 		1)
 			repo_url="$1"
 			debug_print -e -Y -S "(${FUNCNAME[0]}) No destination specified."
-			dest="$WORK_DIR/$(echo $repo_url | rev | cut -d \/ -f1 | rev)"
+			dest="$WORK_DIR/$(echo $repo_url | rev | cut -d '/' -f1 | rev)"
 			debug_print -e -Y -S "(${FUNCNAME[0]}) Using default: $dest"
 			;;
 		2)
@@ -929,7 +927,7 @@ update_template()
 EOL
 	for BLOCK_START in "${BLOCK_NAMES[@]}"
 	do
-		debug_print -e -B -S "(generate_template) Building $BLOCK_START"
+		debug_print -e -B -S "(${FUNCNAME[0]}) Building $BLOCK_START"
 		case "$BLOCK_START" in
 			"Non-Customizable Header")
 				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
@@ -960,31 +958,23 @@ EOL
 						*) [ $START_RECORD -gt 0 ] && echo "$line" >> "$temp_current" ;;
 					esac
 				done
-				OIFS=$IFS
-				IFS=$'\n'
-				for i in $(cat $temp_new)
+				while read new_vars
 				do
+					new_var_name="$(echo $new_vars | cut -d '=' -f 1)"
 					found_var=0
-					i_var_name="$(echo $i | cut -d '=' -f 1)"
-					for j in $(cat $temp_current)
+					while read current_vars
 					do
-						j_var_name="$(echo $j | cut -d '=' -f 1)"
-						if [ "$i_var_name" == "$j_var_name" ]; then
+						current_var_name="$(echo $current_vars | cut -d '=' -f 1)"
+						if [ "$new_var_name" == "$current_var_name" ]; then
 							found_var=1
-							echo "$j" >> "$new_version"
+							echo "$current_vars" >> "$new_version"
 							break
 						fi
-					done
-					[ $found_var -eq 0 ] && echo "$i" >> "$new_version"
-				done
-				IFS=$OIFS
-			;;
-			"Customizable Functions" | \
-			"Customizable Main Run"| \
-			"Customizable Script Entry" | \
-			"Custom Header" | \
-			"Custom Variables" | \
-			"Custom Functions")
+					done < "${temp_current}"
+					[ $found_var -eq 0 ] && echo "$new_vars" >> "$new_version"
+				done < "${temp_new}"
+				;;
+			"Customizable Functions" | 			"Customizable Main Run"| 			"Customizable Script Entry" | 			"Custom Header" | 			"Custom Variables" | 			"Custom Functions")
 				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
 				START_RECORD=0
 				cat "$current_version" | while read line
@@ -1000,8 +990,7 @@ EOL
 				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
 				generate_external_functions "$new_version"
 				;;
-			"Non-Customizable Global Variables" | \
-			"Non-Customizable Functions")
+			"Non-Customizable Global Variables" | 			"Non-Customizable Functions")
 				echo "$BLOCK_FLAG $BLOCK_START $BLOCK_FLAG" >> "$new_version"
 				START_RECORD=0
 				cat "$0" | while read line
@@ -1027,7 +1016,7 @@ EOL
 
 #### Customizable Script Entry ####
 if [ $# -lt 1 ] && [ $ARGS_REQUIRED -eq 1 ]; then
- 	local_print -e -R -S "($0) Missing arguments."
+	local_print -e -R -S "($0) Missing arguments."
 	usage
 else
 	parse_args "$@"

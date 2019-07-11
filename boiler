@@ -17,15 +17,13 @@ trap catch_exit $?
 
 #### Non-Customizable Global Variables ####
 QUIET=""
-START_TIME=$(date +%s)
+START_TIME="$(date +%s)"
 START_DATE="$(date +%m-%d-%y_%H:%M:%S)"
 VERBOSE=""
-BINARIES_MISSING=()
 #### ####
 
 #### Customizable Variables ####
 ARGS_REQUIRED=1
-BINARIES_OPTIONAL=()
 BINARIES_REQUIRED=()
 GARBAGE_COLLECTOR=0
 GARBAGE=()
@@ -38,7 +36,7 @@ LOGGING=0
 
 #### Custom Variables ####
 ACTION=""
-BASH_BOILER_VERSION="2019.07.02.01"
+BASH_BOILER_VERSION="2019.07.11.01"
 BINARIES_OPTIONAL=( 'beautysh' ) # Duplicated on purpose, to keep BINARIES_REQUIRED clean for generation.
 BLOCK_FLAG="####" # Only variable not in alphabetical order because BLOCK_FLAG depends on it.
 BLOCK_END="$BLOCK_FLAG $BLOCK_FLAG"
@@ -73,8 +71,9 @@ NAME=""
 #### Non-Customizable Functions ####
 backup_file()
 {
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	case $# in
-		0) fail_notice_exit "(${FUNCNAME[0]}) No Arguments provided." 101 ;;
 		1)
 			backup_target="$1"
 			debug_print -e -Y -S "(${FUNCNAME[0]}) No backup destination specified."
@@ -116,25 +115,24 @@ backup_file()
 catch_exit()
 {
 	code=$?
-	debug_print -e -B -S "START DATE: $START_DATE"
-	debug_print -e -B -S "END DATE: $(date +%m-%d-%y_%H:%M:%S)"
+	debug_print -e -B -S "(${FUNCNAME[0]}) START DATE: $START_DATE"
+	debug_print -e -B -S "(${FUNCNAME[0]}) END DATE: $(date +%m-%d-%y_%H:%M:%S)"
 	debug_print -e -B -S "$0 ran for  $(( $(date +%s) - $START_TIME ))s"
 	case $code in
-			# Exit codes from https://www.tldp.org/LDP/abs/html/exitcodes.html
-		0) debug_print -e -G -S "Successful Exit: $code" ;;
-		1) debug_print -e -R -S "General Fatal Exit: $code " ;;
-		2) debug_print -e -R -S "Misuse of shell builtins: $code" ;;
-		126) debug_print -e -R -S "Command invoked cannot execute: $code" ;;
-		127) debug_print -e -R -S "Command not found: $code" ;;
-		128) debug_print -e -R -S "Invalid argument to exit: $code" ;;
-		129|13[0-9]|14[0-9]|15[0-9]|16[0-5])debug_print -e -R -S "Fatal error signal: $code" ;;
-		130) debug_print -e -Y -S "Script terminated by Control-C: $code" ;;
-			# Custom exit codes
-		100) debug_print -e -Y -S "Unspecified error: $code" ;;
-		101) debug_print -e -R -S "Missing required variable or argument: $code" ;;
-		*) debug_print -e -Y -S "Unknown exit: $code" ;;
+		# Exit codes from https://www.tldp.org/LDP/abs/html/exitcodes.html
+		0) debug_print -e -G -S "(${FUNCNAME[0]}) Successful Exit: $code" ;;
+		1) debug_print -e -R -S "(${FUNCNAME[0]}) General Fatal Exit: $code " ;;
+		2) debug_print -e -R -S "(${FUNCNAME[0]}) Misuse of shell builtins: $code" ;;
+		126) debug_print -e -R -S "(${FUNCNAME[0]}) Command invoked cannot execute: $code" ;;
+		127) debug_print -e -R -S "(${FUNCNAME[0]}) Command not found: $code" ;;
+		128) debug_print -e -R -S "(${FUNCNAME[0]}) Invalid argument to exit: $code" ;;
+		129|13[0-9]|14[0-9]|15[0-9]|16[0-5])debug_print -e -R -S "(${FUNCNAME[0]}) Fatal error signal: $code" ;;
+		130) debug_print -e -Y -S "(${FUNCNAME[0]}) Script terminated by Control-C: $code" ;;
+		# Custom exit codes
+		100) debug_print -e -Y -S "(${FUNCNAME[0]}) Unspecified error: $code" ;;
+		101) debug_print -e -R -S "(${FUNCNAME[0]}) Missing required variable or argument: $code" ;;
 	esac
-	catch_exit_custom "$?"
+	catch_exit_custom "$code"
 	if [ $GARBAGE_COLLECTOR -eq 1 ]; then
 		for t in "${GARBAGE[@]}"
 		do
@@ -145,11 +143,12 @@ catch_exit()
 }
 check_binaries()
 {
-	debug_print -e -B -S "(${FUNCNAME[0]}) PATH=$PATH"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	if [ $# -lt 1 ];then
-		debug_print -e -Y -S "(${FUNCNAME[0]}) No binary package list to check."
+		debug_print -e -Y -S "(${FUNCNAME[0]}) Not enough arguments received."
 		return 0
 	fi
+	debug_print -e -B -S "(${FUNCNAME[0]}) Using PATH=$PATH"
 	missing=0
 	arr=("$@")
 	debug_print -e -B -S "(${FUNCNAME[0]}) Received binary package list: ${arr[*]}"
@@ -159,7 +158,6 @@ check_binaries()
 			debug_print -e -G -S "(${FUNCNAME[0]}) Found $p"
 		else
 			debug_print -e -Y -S "(${FUNCNAME[0]}) Missing binary package: $p"
-			BINARIES_MISSING=( "${BINARIES_MISSING[@]}" "$p" )
 			((missing++))
 		fi
 	done
@@ -167,7 +165,8 @@ check_binaries()
 }
 garbage_add()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) No arguments received." 101
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	for a in "$@"
 	do
 		debug_print -e -B -S "(${FUNCNAME[0]}) Adding to GARBAGE pile: $a"
@@ -177,7 +176,8 @@ garbage_add()
 }
 garbage_dump()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) No arguments received." 101
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	for i in "$@"
 	do
 		if [ -f "$i" ];then
@@ -197,6 +197,7 @@ garbage_dump()
 }
 debug_state()
 {
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	debug_print -e -B -S "(${FUNCNAME[0]}) Current Template Variable State: "
 	debug_print -e -B -S "(${FUNCNAME[0]}) WORK_DIR: $WORK_DIR"
 	debug_print -e -B -S "(${FUNCNAME[0]}) FORCE_FLAG: $(var_state $FORCE_FLAG)"
@@ -213,26 +214,33 @@ debug_state()
 }
 fail_notice_exit()
 {
-	if [ $# -eq 0 ]; then
-		desc="Unknown"
-		error_code=100
-	elif [ $# -eq 1 ]; then
-		desc="$1"
-		error_code=100
-	elif [ $# -gt 2 ]; then
-		debug_print -e -Y "(${FUNCNAME[0]}) Received more than 2 required args: $*"
-		desc="$1"
-		error_code="$2"
-	else
-		desc="$1"
-		error_code="$2"
-	fi
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	case "$#" in
+		0)
+			desc="Unknown"
+			error_code=100
+			;;
+		1)
+			desc="$1"
+			error_code=100
+			;;
+		2)
+			desc="$1"
+			error_code="$2"
+			;;
+		*)
+			debug_print -e -Y "(${FUNCNAME[0]}) Received more than 2 required args: $*"
+			desc="$1"
+			error_code="$2"
+			;;
+	esac
 	local_print -e -R -S "Failure: $desc"
 	exit $error_code
 }
 get_response()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing question argument." 101
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	debug_print -e -B -S "(${FUNCNAME[0]}) Received question: $1"
 	reply=""
 	[ $FORCE_FLAG -eq 1 ] && reply="y"
@@ -259,43 +267,38 @@ get_response()
 local_print()
 {
 	if [ $LOGGING -eq 1 ]; then
-		cprint -e -l "$LOG_FILE" "$@"
-		return 0
+		cprint -l "$LOG_FILE" "$@"
 	else
-		cprint -e "$@"
-		return 0
+		cprint "$@"
 	fi
 }
 debug_print()
 {
-	if [ $LOGGING -eq 1 ]; then
-		cprint -e -l "$LOG_FILE" "$@"
-		return 0
-	elif [ $DEBUG -eq 1 ]; then
-		cprint -e "$@"
-		return 0
+	if [ $LOGGING -eq 1 ] && [ $DEBUG -eq 1 ]; then
+		cprint -l "$LOG_FILE" "$@"
+	elif [ $LOGGING -eq 1 ] && [ $DEBUG -eq 0 ]; then
+		cprint -l "$LOG_FILE" "$@" >/dev/null 2>&1
+	elif [ $LOGGING -eq 0 ] && [ $DEBUG -eq 1 ]; then
+		cprint "$@"
 	fi
 }
 main()
 {
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	[ $DEBUG -eq 1 ] && VERBOSE="v"
 	[ $DEBUG -eq 0 ] && QUIET="q"
 	if [ $LOGGING -eq 1 ] && [ ! -f "$LOG_FILE" ]; then
-		touch "$LOG_FILE"
-		debug_print -e -B -S "(${FUNCNAME[0]}) Created Log File: $LOG_FILE @ $START_DATE" -l "$LOG_FILE"
+		touch "$LOG_FILE" || fail_notice_exit "(${FUNCNAME[0]}) Unable to create log file @ $LOG_FILE"
+		debug_print -e -B -S "(${FUNCNAME[0]}) Created Log File: $LOG_FILE @ $START_DATE"
 	fi
 	debug_state
 	check_binaries "${BINARIES_REQUIRED[@]}"
-	return_code=$?
-	[ $return_code -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing $return_code required binaries." 101
-	check_binaries "${BINARIES_OPTIONAL[@]}"
-	return_code=$?
-	[ $return_code -ne 0 ] && debug_print -Y -S "(${FUNCNAME[0]}) Missing $return_code optional binaries."
-	[ ${#BINARIES_MISSING[@]} -gt 0 ] && debug_print -Y -S "(${FUNCNAME[0]}) Missing the following binaries: ${BINARIES_MISSING[*]}"
+	[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing $? required binaries."
 	main_custom
 }
 parse_args()
 {
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	EXTRA_ARGS=()
 	while [ ${#} -gt 0 ]; do
 		case "${1}" in
@@ -586,20 +589,27 @@ cprint()
 #### Customizable Functions ####
 catch_exit_custom()
 {
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	while [ ${#} -gt 0 ]; do
+		case "${1}" in
+			0) debug_print -e -G -S "(${FUNCNAME[0]}) Successful exit: $1" ;;
+			*) fail_notice_exit "(${FUNCNAME[0]}) Unknown argument: $1" 1 ;;
+		esac
+		shift 1
+	done
 }
 debug_state_custom()
 {
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	debug_print -e -B -S "(${FUNCNAME[0]}) Current Custom Variable State: "
 }
 main_custom()
 {
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 }
 parse_args_custom()
 {
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	while [ ${#} -gt 0 ]; do
 		case "${1}" in
 			*) fail_notice_exit "(${FUNCNAME[0]}) Unknown argument: $1" 1 ;;
@@ -609,7 +619,7 @@ parse_args_custom()
 }
 usage_custom()
 {
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	echo ""
 }
 #### ####
@@ -617,11 +627,25 @@ usage_custom()
 #### Custom Functions ####
 catch_exit_custom() # Duplicated on purpose, to keep catch_exit_custom clean for generation.
 {
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	if [ $# -lt 1 ];then
+		debug_print -e -Y -S "(${FUNCNAME[0]}) Not enough arguments received."
+		return 0
+	fi
+	case $1 in
+		0)
+			debug_print -e -G -S "(${FUNCNAME[0]}) Successful Exit: $code"
+			[ -f "$NAME" ] && debug_print "(${FUNCNAME[0]}) File ready @ $NAME"
+			;;
+		*)
+			debug_print -e -Y -S "(${FUNCNAME[0]}) Unknown exit: $code"
+			[ -f "$NAME" ] && garbage_add "$NAME"
+			;;
+	esac
 }
 debug_state_custom() # Duplicated on purpose, to keep debug_state_custom clean for generation.
 {
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	debug_print -e -B -S "(${FUNCNAME[0]}) Current Custom Variable State: "
 	debug_print -e -B -S "(${FUNCNAME[0]}) ACTION: $ACTION"
 	debug_print -e -B -S "(${FUNCNAME[0]}) BASH_BOILER_VERSION: $BASH_BOILER_VERSION"
@@ -636,8 +660,8 @@ debug_state_custom() # Duplicated on purpose, to keep debug_state_custom clean f
 }
 generate_template()
 {
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
-	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing template name." 101
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	touch "$1"
 	echo "" >> "$1"
 	cat > "$1" << EOL
@@ -681,21 +705,23 @@ EOL
 }
 generate_external_functions()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing template name." 101
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	index=0
 	for p in "${EXTERNAL_PROJECT_REPOS[@]}"
 	do
 		git_external_project "$p" "${EXTERNAL_PROJECT_DESTINATION[$index]}"
-		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) failed to get external project $p" $?
+		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) failed to get external project $p" 1
 		init_external_project "${EXTERNAL_PROJECT_DESTINATION[$index]}" "${EXTERNAL_PROJECT_INIT_OPTIONS[$index]}"
-		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) failed to setup external project $p with init: ${EXTERNAL_PROJECT_INIT_OPTIONS[$index]}" $?
+		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) failed to setup external project $p with init: ${EXTERNAL_PROJECT_INIT_OPTIONS[$index]}" 1
 		cat "${EXTERNAL_PROJECT_FILE_TO_IMPORT[@]}" >> "$1"
 		garbage_add "${EXTERNAL_PROJECT_DESTINATION[$index]}"
 	done
 }
 generate_template_header()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing template name." 101
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	cat >> "$1" << EOL
 # BASH_BOILER_VERSION=$BASH_BOILER_VERSION
 # Generated with Bash-Boiler on $START_DATE
@@ -711,8 +737,9 @@ EOL
 }
 git_external_project()
 {
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	case $# in
-		0) fail_notice_exit "(${FUNCNAME[0]}) No Arguments provided." 101 ;;
 		1)
 			repo_url="$1"
 			debug_print -e -Y -S "(${FUNCNAME[0]}) No destination specified."
@@ -749,8 +776,9 @@ git_external_project()
 }
 init_external_project()
 {
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 2 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	case $# in
-		0|1) fail_notice_exit "(${FUNCNAME[0]}) Not Enough Arguments provided." 101 ;;
 		2)
 			project_dir="$1"
 			init_command="$2"
@@ -776,7 +804,7 @@ init_external_project()
 }
 parse_args_custom() # Duplicated on purpose, to keep parse_args_custom clean for generation.
 {
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	while [ ${#} -gt 0 ]; do
 		case "${1}" in
 			"--generate" | "-g")
@@ -798,7 +826,8 @@ parse_args_custom() # Duplicated on purpose, to keep parse_args_custom clean for
 }
 process_missing_binaries()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing binary names." 101
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	return_code=0
 	for b in "$@"
 	do
@@ -808,7 +837,10 @@ process_missing_binaries()
 				touch "$WORK_DIR/$(basename $0)-requirements.txt"
 				echo "$b" >> "$WORK_DIR/$(basename $0)-requirements.txt"
 				check_binaries "virtualenv" "pip"
-				[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing $? required binaries." 101
+				if [ $? -ne 0 ]; then
+					local_print -R -S "(${FUNCNAME[0]}) Missing $? required binaries." 101
+					return 1
+				fi
 				;;
 			*)
 				debug_print -e -Y -S "(${FUNCNAME[0]}) No processing defined for $1."
@@ -818,16 +850,20 @@ process_missing_binaries()
 	done
 	if [ -f "$WORK_DIR/$(basename $0)-requirements.txt" ]; then
 		setup_virtualenv "$WORK_DIR/$(basename $0)-requirements.txt" "$WORK_DIR/$(basename $0)-pyvenv"
-		garbage_add "$WORK_DIR/$(basename $0)-requirements.txt"
-		if [ $? -ne 0 ]; then
+		return_code=$?
+		if [ $return_code -eq 0 ]; then
+			PATH="$PATH:$WORK_DIR/$(basename $0)-pyvenv/bin"
+		else
 			local_print -e -S -R "(${FUNCNAME[0]}) Failed to process python binaries $WORK_DIR/$(basename $0)-requirements.txt"
-			return_code=$?
 		fi
+		garbage_add "$WORK_DIR/$(basename $0)-requirements.txt"
 	fi
 	return $return_code
 }
 setup_virtualenv()
 {
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	case "$#" in
 		1)
 			requirements="$1"
@@ -871,16 +907,7 @@ setup_virtualenv()
 }
 main_custom() # Duplicated on purpose, to keep main_custom clean for generation.
 {
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args: $*"
-	if [ ${#BINARIES_MISSING[@]} -gt 0 ]; then
-		process_missing_binaries "${BINARIES_MISSING[*]}"
-		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Could not process missing binaries." 1
-		export PATH="$WORK_DIR/$(basename $0)-pyvenv/bin:"$PATH
-		check_binaries "${BINARIES_REQUIRED[@]}"
-		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Binaries still missing after processing." 1
-		check_binaries "${BINARIES_OPTIONAL[@]}"
-		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Binaries still missing after processing." 1
-	fi
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	if [[ "$ACTION" != "" ]];then
 		[[ "$NAME" == "" ]] && fail_notice_exit "(${FUNCNAME[0]}) Missing script name. Required with action: $ACTION" 1
 		if [ -f "$NAME" ];then
@@ -904,6 +931,11 @@ main_custom() # Duplicated on purpose, to keep main_custom clean for generation.
 			*) fail_notice_exit "(${FUNCNAME[0]}) Unknown ACTION: $ACTION";;
 		esac
 		if [ -f "$NAME" ];then
+			check_binaries 'beautysh'
+			if [ $? -ne 0 ]; then
+				process_missing_binaries 'beautysh'
+				[ $? -ne 0 ] && local_print -Y -S "(${FUNCNAME[0]}) Failed to get beautysh dynamically."
+			fi
 			beautysh --tab --files "$NAME"
 		else
 			local_print -e -R -S "(${FUNCNAME[0]}) Failed to beautify because missing file: $NAME."
@@ -918,7 +950,8 @@ usage_custom() # Duplicated on purpose, to keep usage_custom clean for generatio
 }
 update_template()
 {
-	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing template name." 101
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
 	current_version="$1"
 	new_version="$1-$BASH_BOILER_VERSION"
 	echo "" >> "$new_version"

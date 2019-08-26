@@ -36,7 +36,7 @@ LOGGING=0
 
 #### Custom Variables ####
 ACTION=""
-BASH_BOILER_VERSION="2019.07.11.01"
+BASH_BOILER_VERSION="2019.08.26.01"
 BINARIES_OPTIONAL=( 'beautysh' ) # Duplicated on purpose, to keep BINARIES_REQUIRED clean for generation.
 BLOCK_FLAG="####" # Only variable not in alphabetical order because BLOCK_FLAG depends on it.
 BLOCK_END="$BLOCK_FLAG $BLOCK_FLAG"
@@ -72,7 +72,14 @@ NAME=""
 backup_file()
 {
 	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
-	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received." 101
+	debug_print -e -B -S "(${FUNCNAME[0]}) Redirecting to make_backup function."
+	make_backup $@
+	return $?
+}
+make_backup()
+{
+	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	[ $# -lt 1 ] && fail_notice_exit "(${FUNCNAME[0]}) Not enough arguments received."
 	case $# in
 		1)
 			backup_target="$1"
@@ -92,25 +99,23 @@ backup_file()
 			;;
 	esac
 
-	if [ ! -f "$backup_target" ]; then
-		local_print -R -S "(${FUNCNAME[0]}) No file to backup @ $backup_target"
+	if [ ! -f "$backup_target" ] && [ ! -d "$backup_target" ]; then
+		local_print -R -S "(${FUNCNAME[0]}) Nothing to backup @ $backup_target"
 		return 1
 	fi
-	if	[ -d "$backup_dest" ]; then
-		local_print -R -S "(${FUNCNAME[0]}) Backup destination is a directory: $backup_dest"
-		return 1
-	fi
-	if [ -f "$backup_dest" ]; then
-		local_print -Y -S "(${FUNCNAME[0]}) File already exists @ $backup_dest"
+
+	if	[ -d "$backup_dest" ] || [ -f "$backup_dest" ]; then
+		local_print -R -S "(${FUNCNAME[0]}) Backup destination already exists: $backup_dest"
 		get_response "(${FUNCNAME[0]}) Would you like to backup $backup_dest?"
 		[ $? -eq 1 ] && return 1
-		backup_file "$backup_dest"
+		make_backup "$backup_dest"
 		[ $? -ne 0 ] && return 1
 	fi
-	cp -f"$VERBOSE" -- "$backup_target" "$backup_dest"
-	[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Backup failure for $backup_target" $?
+	cp -rf"$VERBOSE" -- "$backup_target" "$backup_dest"
+	return_code=$?
+	[ $return_code -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Backup failure for $backup_target" $return_code
 	debug_print -e -B -S "Successfully created backup of $backup_target to $backup_dest"
-	return 0
+	return $return_code
 }
 catch_exit()
 {

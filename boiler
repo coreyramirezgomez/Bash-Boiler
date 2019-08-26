@@ -840,6 +840,7 @@ process_missing_binaries()
 			"beautysh")
 				debug_print -e -B -S "(${FUNCNAME[0]}) $b is a python package, adding to list."
 				touch "$WORK_DIR/$(basename $0)-requirements.txt"
+				garbage_add "$WORK_DIR/$(basename $0)-requirements.txt"
 				echo "$b" >> "$WORK_DIR/$(basename $0)-requirements.txt"
 				check_binaries "virtualenv" "pip"
 				if [ $? -ne 0 ]; then

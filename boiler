@@ -203,19 +203,15 @@ garbage_dump()
 debug_state()
 {
 	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
-	debug_print -e -B -S "(${FUNCNAME[0]}) Current Template Variable State: "
-	debug_print -e -B -S "(${FUNCNAME[0]}) WORK_DIR: $WORK_DIR"
-	debug_print -e -B -S "(${FUNCNAME[0]}) FORCE_FLAG: $(var_state $FORCE_FLAG)"
-	debug_print -e -B -S "(${FUNCNAME[0]}) DEBUG: $(var_state $DEBUG)"
-	debug_print -e -B -S "(${FUNCNAME[0]}) VERBOSE: $VERBOSE"
-	debug_print -e -B -S "(${FUNCNAME[0]}) QUIET: $QUIET"
-	debug_print -e -B -S "(${FUNCNAME[0]}) START_DATE: $START_DATE"
-	debug_print -e -B -S "(${FUNCNAME[0]}) START_TIME: $START_TIME"
-	debug_print -e -B -S "(${FUNCNAME[0]}) LOG_FILE: $LOG_FILE"
-	debug_print -e -B -S "(${FUNCNAME[0]}) LOGGING: $(var_state $LOGGING)"
-	debug_print -e -B -S "(${FUNCNAME[0]}) BINARIES_REQUIRED: ${BINARIES_REQUIRED[*]}"
-	debug_print -e -B -S "(${FUNCNAME[0]}) BINARIES_OPTIONAL: ${BINARIES_OPTIONAL[*]}"
-	debug_state_custom
+	debug_print -e -B -S "(${FUNCNAME[0]}) Variable States: "
+	for v in "$@"
+	do
+		if [[ "${!v}" =~ ^-?[0-9]+$ ]]; then
+			debug_print -e -B -S "(${FUNCNAME[0]}) $v: $(var_state ${!v})"
+		else
+			debug_print -e -B -S "(${FUNCNAME[0]}) $v: ${!v}"
+		fi
+	done
 }
 fail_notice_exit()
 {
@@ -287,20 +283,6 @@ debug_print()
 		cprint "$@"
 	fi
 }
-main()
-{
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
-	[ $DEBUG -eq 1 ] && VERBOSE="v"
-	[ $DEBUG -eq 0 ] && QUIET="q"
-	if [ $LOGGING -eq 1 ] && [ ! -f "$LOG_FILE" ]; then
-		touch "$LOG_FILE" || fail_notice_exit "(${FUNCNAME[0]}) Unable to create log file @ $LOG_FILE"
-		debug_print -e -B -S "(${FUNCNAME[0]}) Created Log File: $LOG_FILE @ $START_DATE"
-	fi
-	debug_state
-	check_binaries "${BINARIES_REQUIRED[@]}"
-	[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing $? required binaries."
-	main_custom
-}
 parse_args()
 {
 	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
@@ -308,7 +290,11 @@ parse_args()
 	while [ ${#} -gt 0 ]; do
 		case "${1}" in
 			"--help" | "-h") usage ;;
-			"--debug") DEBUG=$(var_toggle $DEBUG) ;;
+			"--debug")
+				DEBUG=$(var_toggle $DEBUG)
+				[ $DEBUG -eq 1 ] && VERBOSE="v"
+				[ $DEBUG -eq 0 ] && QUIET="q"
+				;;
 			"--force" | "-f") FORCE_FLAG=$(var_toggle $FORCE_FLAG) ;;
 			"--garbage-collect") GARBAGE_COLLECTOR=$(var_toggle $GARBAGE_COLLECTOR) ;;
 			"--logging"| "-l") LOGGING=$(var_toggle $LOGGING) ;;
@@ -329,6 +315,11 @@ parse_args()
 		esac
 		shift 1
 	done
+	if [ $LOGGING -eq 1 ] && [ ! -f "$LOG_FILE" ]; then
+		touch "$LOG_FILE" || fail_notice_exit "(${FUNCNAME[0]}) Unable to create log file @ $LOG_FILE"
+		debug_print -e -B -S "(${FUNCNAME[0]}) Created Log File: $LOG_FILE @ $START_DATE"
+	fi
+	debug_state "WORK_DIR" "FORCE_FLAG" "DEBUG" "QUIET" "START_DATE" "START_TIME" "LOG_FILE" "LOGGING" "BINARIES_REQUIRED"
 	parse_args_custom "${EXTRA_ARGS[@]}"
 }
 usage()
@@ -603,14 +594,14 @@ catch_exit_custom()
 		shift 1
 	done
 }
-debug_state_custom()
+main()
 {
 	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
-	debug_print -e -B -S "(${FUNCNAME[0]}) Current Custom Variable State: "
-}
-main_custom()
-{
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+#	debug_state "CUSTOM_VAR1" "CUSTOM_VAR2"
+	if [ ${#BINARIES_REQUIRED[@]} -gt 0 ]; then
+		check_binaries "${BINARIES_REQUIRED[@]}"
+		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing $? required binaries."
+	fi
 }
 parse_args_custom()
 {
@@ -626,11 +617,12 @@ usage_custom()
 {
 	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	echo ""
+	echo ""
 }
 #### ####
 
 #### Custom Functions ####
-catch_exit_custom() # Duplicated on purpose, to keep catch_exit_custom clean for generation.
+catch_exit_custom() # Duplicated on purpose, to keep orginal clean for generation.
 {
 	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	if [ $# -lt 1 ];then
@@ -647,21 +639,6 @@ catch_exit_custom() # Duplicated on purpose, to keep catch_exit_custom clean for
 			[ -f "$NAME" ] && garbage_add "$NAME"
 			;;
 	esac
-}
-debug_state_custom() # Duplicated on purpose, to keep debug_state_custom clean for generation.
-{
-	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
-	debug_print -e -B -S "(${FUNCNAME[0]}) Current Custom Variable State: "
-	debug_print -e -B -S "(${FUNCNAME[0]}) ACTION: $ACTION"
-	debug_print -e -B -S "(${FUNCNAME[0]}) BASH_BOILER_VERSION: $BASH_BOILER_VERSION"
-	debug_print -e -B -S "(${FUNCNAME[0]}) BLOCK_FLAG: $BLOCK_FLAG"
-	debug_print -e -B -S "(${FUNCNAME[0]}) BLOCK_END: $BLOCK_END"
-	debug_print -e -B -S "(${FUNCNAME[0]}) BLOCK_NAMES: ${BLOCK_NAMES[*]}"
-	debug_print -e -B -S "(${FUNCNAME[0]}) EXTERNAL_PROJECT_DESTINATION: ${EXTERNAL_PROJECT_DESTINATION[*]}"
-	debug_print -e -B -S "(${FUNCNAME[0]}) EXTERNAL_PROJECT_FILE_TO_IMPORT: ${EXTERNAL_PROJECT_FILE_TO_IMPORT[*]}"
-	debug_print -e -B -S "(${FUNCNAME[0]}) EXTERNAL_PROJECT_INIT_OPTIONS: ${EXTERNAL_PROJECT_INIT_OPTIONS[*]}"
-	debug_print -e -B -S "(${FUNCNAME[0]}) EXTERNAL_PROJECT_REPOS: ${EXTERNAL_PROJECT_REPOS[*]}"
-	debug_print -e -B -S "(${FUNCNAME[0]}) NAME: $NAME"
 }
 generate_template()
 {
@@ -774,7 +751,12 @@ git_external_project()
 		cd "$WORK_DIR" || local_print -e -R -S "(${FUNCNAME[0]}) Can't cd in $WORK_DIR"
 		[ $? -ne 0 ] && return 1
 	else
-		git clone "$FLAGS" -- "$repo_url" "$dest"
+		if [ -z "$FLAGS" ]; then
+			git clone -- "$repo_url" "$dest"
+		else
+			debug_print "(${FUNCNAME[0]}) Cloning flags: $FLAGS"
+			git clone "$FLAGS" -- "$repo_url" "$dest"
+		fi
 		return_code=$?
 	fi
 	return $return_code
@@ -807,7 +789,7 @@ init_external_project()
 	[ $? -ne 0 ] && return 1
 	return $return_code
 }
-parse_args_custom() # Duplicated on purpose, to keep parse_args_custom clean for generation.
+parse_args_custom() # Duplicated on purpose, to keep orginal clean for generation.
 {
 	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
 	while [ ${#} -gt 0 ]; do
@@ -911,9 +893,14 @@ setup_virtualenv()
 	fi
 	return 0
 }
-main_custom() # Duplicated on purpose, to keep main_custom clean for generation.
+main() # Duplicated on purpose, to keep orginal clean for generation.
 {
 	debug_print -e -B -S "(${FUNCNAME[0]}) Started ${FUNCNAME[0]} function with args ($#): $*"
+	debug_state "BINARIES_OPTIONAL" "ACTION" "BASH_BOILER_VERSION" "BLOCK_FLAG" "BLOCK_END" "BLOCK_NAMES" "EXTERNAL_PROJECT_DESTINATION" "EXTERNAL_PROJECT_FILE_TO_IMPORT" "EXTERNAL_PROJECT_INIT_OPTIONS" "EXTERNAL_PROJECT_REPOS" "NAME"
+	if [ ${#BINARIES_REQUIRED[@]} -gt 0 ]; then
+		check_binaries "${BINARIES_REQUIRED[@]}"
+		[ $? -ne 0 ] && fail_notice_exit "(${FUNCNAME[0]}) Missing $? required binaries."
+	fi
 	if [[ "$ACTION" != "" ]];then
 		[[ "$NAME" == "" ]] && fail_notice_exit "(${FUNCNAME[0]}) Missing script name. Required with action: $ACTION" 1
 		if [ -f "$NAME" ];then
@@ -942,14 +929,17 @@ main_custom() # Duplicated on purpose, to keep main_custom clean for generation.
 				process_missing_binaries 'beautysh'
 				[ $? -ne 0 ] && local_print -Y -S "(${FUNCNAME[0]}) Failed to get beautysh dynamically."
 			fi
-			beautysh --tab --files "$NAME"
+			case "$(pip show beautysh | grep Version | sed -e 's/Version: //g')" in
+				"2"* | "3"* | "4"*) beautysh --tab --files "$NAME" ;;
+				*) beautysh --tab "$NAME" ;;
+			esac
 		else
 			local_print -e -R -S "(${FUNCNAME[0]}) Failed to beautify because missing file: $NAME."
 			exit 1
 		fi
 	fi
 }
-usage_custom() # Duplicated on purpose, to keep usage_custom clean for generation.
+usage_custom() # Duplicated on purpose, to keep orginal clean for generation.
 {
 	echo "	[[--generate|--update]|[-g|-u]]: Specify action to generate or update a script."
 	echo "	--name filename: Filename to operate on."
